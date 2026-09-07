@@ -9,3 +9,4 @@ before you add or change a feature.
 | Feature | Summary |
 | --- | --- |
 | [E2E folder](feat-e2e-folder/README.md) | Adds one shared end-to-end test repository to the many-repository architecture. |
+| [DDD design](feat-ddd-design/README.md) | Adds domain-driven design as a design method that a project can select. |
