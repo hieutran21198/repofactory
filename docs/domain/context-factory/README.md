@@ -2,6 +2,7 @@
 
 **Subdomain:** Repository factory
 **Type:** Core
+**Component:** services/factory
 
 ## Purpose
 
@@ -24,6 +25,24 @@ working rules the factory supplies to a generated repository.
 - One accepted feature artifact file has one issue in one selected provider.
 - A child artifact issue points to its parent artifact issue.
 - Provider identifiers do not occur in artifact files.
+
+## Inbound messages
+
+| Message | Kind | From |
+| --- | --- | --- |
+| Compose repository blueprint | command | Repository maintainer |
+| Synchronize accepted artifacts | command | GitHub Actions |
+
+## Outbound messages
+
+| Message | Kind | To |
+| --- | --- | --- |
+| Repository blueprint composed | event | Repository maintainer |
+| Artifact issue synchronized | event | Repository maintainer |
+
+## Aggregates
+
+- [Repository blueprint](agg-repository-blueprint.md)
 
 ## Assumptions
 
