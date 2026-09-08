@@ -11,3 +11,4 @@ before you add or change a feature.
 | [E2E folder](feat-e2e-folder/README.md) | Adds one shared end-to-end test repository to the many-repository architecture. |
 | [DDD design](feat-ddd-design/README.md) | Adds domain-driven design as a design method that a project can select. |
 | [Single repository architecture](feat-single-repo-arch/README.md) | Adds the single repository architecture: one repository is one component. |
+| [Accepted artifact issues](feat-accepted-artifact-issues/README.md) | Creates project issues for accepted feature artifacts. |
