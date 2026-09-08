@@ -1,0 +1,50 @@
+# Accepted Artifact Issues
+
+The repository is the source of truth for feature artifacts. GitHub Actions makes project issues
+only after an artifact pull request merges.
+
+## Lifecycle
+
+| Artifact change | Project result |
+| --- | --- |
+| Add | Make an issue with the configured first status. |
+| Change | Update the existing issue and keep its status. |
+| Rename | Update the existing issue identity and links. |
+| Delete | Set status `Withdrawn`, then close or archive the issue. |
+| Close a pull request without merge | Make no project change. |
+
+The workflow also has a manual full scan. Use it for the first setup or for recovery.
+
+## GitHub Projects setup
+
+1. Make a personal or organization project.
+2. Add one single-select field named `Status`.
+3. Add every configured artifact status to the field.
+4. Make a classic personal access token with `repo` and `project` scopes.
+5. Add the token with the configured repository secret name.
+
+The workflow makes repository issues. It connects child issues with the GitHub sub-issues API.
+
+## Trello setup
+
+1. Make one board.
+2. Make one open list for every configured artifact status.
+3. Add a text custom field named `Artifact path`.
+4. Add a text custom field named `Artifact type`.
+5. Add a text custom field named `Parent artifact`.
+6. Add the Trello API key with the configured repository secret name.
+7. Add the Trello token with the configured repository secret name.
+
+The workflow adds child card URLs to a `Children` checklist on the parent card.
+
+## Links
+
+Each issue links to the current artifact, the accepted commit, and the merged pull request. The
+workflow adds one managed comment to the merged pull request with all synchronized issue URLs.
+
+Do not add issue URLs to artifact frontmatter. A provider change must not change the artifacts.
+
+## Errors
+
+The workflow checks the project schema before its first write. It stops with an error if a required
+project, status, list, custom field, or credential does not exist.
