@@ -5,10 +5,11 @@
 
 ## Description
 
-The DDD assets give where a bounded context lives. Today they give the rule for the multiple
-repositories architecture only. This specification adds the rule for the single repository
-architecture next to it. The DDD module and the composition do not get a new block; the assets
-state both rules.
+The DDD assets give where a bounded context lives. Each DDD file that names an architecture has
+one version for each architecture. The DDD module and the composition select the version of the
+active architecture. The current contract is in the change
+[spec-ddd-arch-trees](../changes/change-ddd-per-arch/specifications/spec-ddd-arch-trees.md) and
+[spec-composition-arch-trees](../changes/change-ddd-per-arch/specifications/spec-composition-arch-trees.md).
 
 ## Contract
 
@@ -16,18 +17,19 @@ The rule: in the single repository architecture, one bounded context is one dire
 `src/`. A shared kernel or a published language is one directory in `src/` that two contexts
 import.
 
-The edits, one sentence for each architecture:
+The files that state the rule, in the `single` asset trees:
 
-| File | Place | Edit |
-| --- | --- | --- |
-| `services/factory/domain/design/ddd/_assets/docs/wiki/design/ddd/README.md` | Section "Where a context lives" | The first list item gives both rules. The library item gives `libs/` for `multiple` and a directory in `src/` for `single`. |
-| Same file | Procedure "add a bounded context", step 5 | Make `services/<name>/` in the multiple repositories architecture, or `src/<name>/` in the single repository architecture. |
-| `services/factory/domain/design/ddd/_assets/docs/wiki/design/ddd/templates/domain/context-name/README.md` | `**Component:**` line | `services/<name> \| src/<name>` |
-| `services/factory/composition/artifact-driven/_assets/ddd/docs/wiki/design/ddd/artifact-driven.md` | Phase 4 row | Code the model in the directory of the context: `services/<name>/` or `src/<name>/`. |
-| `services/factory/composition/artifact-driven/_assets/ddd/agent/role/solution-expert/ROLE.md` | Phase 2 step 1, step 4, and the first rule | Each sentence gives both architectures. |
-| `services/factory/composition/artifact-driven/_assets/ddd/AGENTS.md` | The DDD paragraph | Unchanged. This variant is for `multiple`. The `single` DDD variant is in `spec-single-composition`. |
+| File | Place |
+| --- | --- |
+| `services/factory/domain/design/ddd/_assets/single/docs/wiki/design/ddd/README.md` | Section "Where a context lives" and step 5 of the procedure "add a bounded context". |
+| `services/factory/domain/design/ddd/_assets/single/docs/wiki/design/ddd/templates/domain/context-name/README.md` | `**Component:** src/<name>` |
+| `services/factory/domain/design/ddd/_assets/single/docs/wiki/design/ddd/templates/domain/context-map.md` | The Component column. |
+| `services/factory/composition/artifact-driven/_assets/single/ddd/docs/wiki/design/ddd/artifact-driven.md` | The phase 4 row. |
+| `services/factory/composition/artifact-driven/_assets/single/ddd/agent/role/solution-expert/ROLE.md` | Phase 2 step 1, step 4, and the first rule. |
+| `services/factory/composition/artifact-driven/_assets/single/ddd/AGENTS.md` | The DDD paragraph. |
+
+The `multiple` asset trees state the rule of the multiple repositories architecture only.
 
 ## Errors
 
-None. The edits are static text. The existing checks of the DDD module and the composition must
-still pass.
+The check fails if a file of one architecture names the directory of the other architecture.

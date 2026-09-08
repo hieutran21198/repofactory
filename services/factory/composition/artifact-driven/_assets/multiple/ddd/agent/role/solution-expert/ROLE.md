@@ -15,8 +15,7 @@ Do these steps after step 2 of the phase 2 procedure above.
 
 1. For each context that the feature touches, fill the inbound messages, the outbound
    messages, and the `**Component:**` line of `docs/domain/context-<name>/README.md`. The
-   component is one directory in `services/` in the multiple repositories architecture, or one
-   directory in `src/` in the single repository architecture.
+   component is one directory in `services/`.
 2. Find the aggregates. Put in one aggregate only the data that one business rule must keep
    consistent in one transaction. Write one `docs/domain/context-<name>/agg-<name>.md` for each
    aggregate. Give the invariants, the state transitions, the handled commands, the created
@@ -24,8 +23,7 @@ Do these steps after step 2 of the phase 2 procedure above.
 3. Write one policy for each rule of the form "when this event, then this command". Put it in
    the corrective policies table of the aggregate that handles the command.
 4. Update `docs/domain/context-map.md` with the contract between each pair of contexts that
-   communicate. Put a shared kernel or a published language in `libs/<name>` in the multiple
-   repositories architecture, or in `src/<name>` in the single repository architecture.
+   communicate. Put a shared kernel or a published language in `libs/<name>`.
 5. Write one `decisions/adr-<name>.md` that selects the implementation pattern of each
    aggregate. Use the table "Select the implementation pattern" of the design guide. Give the
    pattern in the `**Pattern:**` line of the aggregate canvas.
@@ -40,9 +38,8 @@ Do these steps after step 2 of the phase 2 procedure above.
 
 ### Rules
 
-- One bounded context is one directory in `services/` in the multiple repositories
-  architecture, or one directory in `src/` in the single repository architecture. An
-  application holds no domain rule. A library holds only a shared kernel or a published language.
+- One bounded context is one directory in `services/`. An application holds no domain rule. A
+  library holds only a shared kernel or a published language.
 - A context does not read the data store of another context.
 - Reference another aggregate by identity only.
 - Use the terms of the glossary. Report a specification that names a context that does not

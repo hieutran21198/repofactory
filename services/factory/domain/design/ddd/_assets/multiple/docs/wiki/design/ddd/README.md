@@ -107,17 +107,12 @@ Write one canvas for each aggregate in `docs/domain/context-<name>/agg-<name>.md
 
 ## Where a context lives
 
-The repository architecture defines the components. The domain model maps to it with one rule
-for each architecture.
+The repository architecture defines the components. The domain model maps to it with one rule.
 
-- In the multiple repositories architecture, one bounded context is implemented by one directory
-  in `services/`. In the single repository architecture, one bounded context is implemented by
-  one directory in `src/`.
+- One bounded context is implemented by one directory in `services/`.
 - An application in `apps/` is a user interface over one or more contexts. It holds no domain
   rule.
-- A shared kernel or a published language is a library in `libs/` in the multiple repositories
-  architecture. In the single repository architecture, it is one directory in `src/` that two
-  contexts import.
+- A library in `libs/` holds only a shared kernel or a published language.
 - A context does not read the data store of another context. It uses the messages of the
   context map.
 
@@ -165,8 +160,7 @@ not known. Do not record a status in a domain artifact.
 2. Write the purpose, the subdomain, the type, and the ubiquitous language in `README.md`.
 3. Add the context to the tables of `docs/domain/README.md` and `docs/domain/context-map.md`.
 4. Add the terms of the context to `docs/domain/glossary.md`.
-5. Make the directory of the component of the context: `services/<name>/` in the multiple
-   repositories architecture, or `src/<name>/` in the single repository architecture.
+5. Make the directory `services/<name>/` for the component of the context.
 
 If the project uses the artifact-driven documentation model, read `artifact-driven.md` in this
 directory. It maps each DDD step to one of the five phases.

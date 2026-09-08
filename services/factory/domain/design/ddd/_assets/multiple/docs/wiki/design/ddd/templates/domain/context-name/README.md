@@ -2,7 +2,7 @@
 
 **Subdomain:** <name>
 **Type:** Core | Supporting | Generic
-**Component:** services/<name> | src/<name>
+**Component:** services/<name>
 
 ## Purpose
 

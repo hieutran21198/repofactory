@@ -22,11 +22,13 @@ in
               mkRole = name: description: {
                 inherit description;
                 # The DDD chapter is a second authored file, appended when the design method is DDD.
+                # It has one version for each repository architecture.
                 instruction =
+                  let
+                    chapter = ./_assets/${repo-arch.use}/ddd/agent/role/${name}/ROLE.md;
+                  in
                   builtins.readFile ./_assets/agent/role/${name}/ROLE.md
-                  + lib.optionalString (ddd && builtins.pathExists ./_assets/ddd/agent/role/${name}/ROLE.md) (
-                    "\n" + builtins.readFile ./_assets/ddd/agent/role/${name}/ROLE.md
-                  );
+                  + lib.optionalString (ddd && builtins.pathExists chapter) ("\n" + builtins.readFile chapter);
                 harness.opencode.mode = "subagent";
               };
 
@@ -49,13 +51,21 @@ in
       # Combine the documentation model with the repo-arch seeds.
       (lib.mkIf (documentation.use == model && repo-arch.use == "multiple") {
         files = {
-          "AGENTS.md".source = lib.mkForce (if ddd then ./_assets/ddd/AGENTS.md else ./_assets/AGENTS.md);
+          "AGENTS.md".source = lib.mkForce (
+            if ddd then ./_assets/multiple/ddd/AGENTS.md else ./_assets/multiple/AGENTS.md
+          );
           "docs/README.md".source = lib.mkForce (
             if ddd then ./_assets/ddd/docs/README.md else ./_assets/docs/README.md
           );
           "docs/wiki/README.md".source = lib.mkForce (
-            if ddd then ./_assets/ddd/docs/wiki/README.md else ./_assets/docs/wiki/README.md
+            if ddd then ./_assets/multiple/ddd/docs/wiki/README.md else ./_assets/multiple/docs/wiki/README.md
           );
+        }
+        // lib.optionalAttrs ddd {
+          "docs/wiki/design/ddd/artifact-driven.md" = {
+            source = ./_assets/multiple/ddd/docs/wiki/design/ddd/artifact-driven.md;
+            copyMode = "copy";
+          };
         };
       })
 
@@ -71,14 +81,10 @@ in
           "docs/wiki/README.md".source = lib.mkForce (
             if ddd then ./_assets/single/ddd/docs/wiki/README.md else ./_assets/single/docs/wiki/README.md
           );
-        };
-      })
-
-      # Combine the documentation model with the DDD design method.
-      (lib.mkIf (documentation.use == model && ddd) {
-        files = {
+        }
+        // lib.optionalAttrs ddd {
           "docs/wiki/design/ddd/artifact-driven.md" = {
-            source = ./_assets/ddd/docs/wiki/design/ddd/artifact-driven.md;
+            source = ./_assets/single/ddd/docs/wiki/design/ddd/artifact-driven.md;
             copyMode = "copy";
           };
         };

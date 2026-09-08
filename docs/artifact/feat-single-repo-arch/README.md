@@ -12,3 +12,4 @@ deliverable and does not need the component-type split of the multiple repositor
 - [Specifications](specifications/README.md)
 - [Decisions](decisions/)
 - [Implementation plan](tasks/README.md)
+- [Changes](changes/)

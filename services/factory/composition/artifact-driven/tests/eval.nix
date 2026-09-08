@@ -12,6 +12,7 @@ let
     mkIf = condition: value: if condition then value else { };
     mkForce = value: value;
     optionalString = condition: string: if condition then string else "";
+    optionalAttrs = condition: attrs: if condition then attrs else { };
     foldl' = builtins.foldl';
     nameValuePair = name: value: { inherit name value; };
     mapAttrs' = f: set: builtins.listToAttrs (map (name: f name set.${name}) (builtins.attrNames set));
@@ -46,17 +47,20 @@ let
       namespace = "factory";
     }).config;
 
-  multipleOn = evalModule "multiple" "ddd";
-  multipleOff = evalModule "multiple" "unset";
-  singleOn = evalModule "single" "ddd";
-  singleOff = evalModule "single" "unset";
+  configs = {
+    multipleOn = evalModule "multiple" "ddd";
+    multipleOff = evalModule "multiple" "unset";
+    singleOn = evalModule "single" "ddd";
+    singleOff = evalModule "single" "unset";
+  };
+  noArchOn = evalModule "unset" "ddd";
 
   roles = [
     "requirement-expert"
     "solution-expert"
   ];
   base = role: builtins.readFile (../_assets/agent/role + "/${role}/ROLE.md");
-  chapter = role: builtins.readFile (../_assets/ddd/agent/role + "/${role}/ROLE.md");
+  chapter = arch: role: builtins.readFile (../_assets + "/${arch}/ddd/agent/role/${role}/ROLE.md");
   instruction = cfg: role: cfg.factory.domain.agent.role.builder.${role}.instruction;
 
   guidance = [
@@ -64,20 +68,20 @@ let
     "docs/README.md"
     "docs/wiki/README.md"
   ];
-  sourceOf = cfg: name: cfg.files.${name}.source;
   page = "docs/wiki/design/ddd/artifact-driven.md";
+  sourceOf = cfg: name: cfg.files.${name}.source;
 
   # The knowledge index does not depend on the architecture.
   expected = {
     multipleOn = {
-      "AGENTS.md" = ../_assets/ddd/AGENTS.md;
+      "AGENTS.md" = ../_assets/multiple/ddd/AGENTS.md;
       "docs/README.md" = ../_assets/ddd/docs/README.md;
-      "docs/wiki/README.md" = ../_assets/ddd/docs/wiki/README.md;
+      "docs/wiki/README.md" = ../_assets/multiple/ddd/docs/wiki/README.md;
     };
     multipleOff = {
-      "AGENTS.md" = ../_assets/AGENTS.md;
+      "AGENTS.md" = ../_assets/multiple/AGENTS.md;
       "docs/README.md" = ../_assets/docs/README.md;
-      "docs/wiki/README.md" = ../_assets/docs/wiki/README.md;
+      "docs/wiki/README.md" = ../_assets/multiple/docs/wiki/README.md;
     };
     singleOn = {
       "AGENTS.md" = ../_assets/single/ddd/AGENTS.md;
@@ -90,48 +94,63 @@ let
       "docs/wiki/README.md" = ../_assets/single/docs/wiki/README.md;
     };
   };
-  configs = {
-    inherit
-      multipleOn
-      multipleOff
-      singleOn
-      singleOff
-      ;
-  };
+  keys = builtins.attrNames configs;
+
   sourcesMatch = builtins.all (
     key: builtins.all (name: sourceOf configs.${key} name == expected.${key}.${name}) guidance
-  ) (builtins.attrNames configs);
+  ) keys;
   sourcesExist = builtins.all (
     key: builtins.all (name: builtins.pathExists (sourceOf configs.${key} name)) guidance
-  ) (builtins.attrNames configs);
+  ) keys;
 
   chapterAppended = builtins.all (
-    role: instruction multipleOn role == base role + "\n" + chapter role
-  ) roles;
-  chapterOmitted = builtins.all (role: instruction multipleOff role == base role) roles;
+    arch:
+    builtins.all (
+      role: instruction configs."${arch}On" role == base role + "\n" + chapter arch role
+    ) roles
+  ) [ "multiple" "single" ];
+  chapterOmitted = builtins.all (
+    cfg: builtins.all (role: instruction cfg role == base role) roles
+  ) [ configs.multipleOff configs.singleOff noArchOn ];
   chapterHasHeading = builtins.all (
-    role: builtins.match "## Domain-Driven Design\n.*" (chapter role) != null
-  ) roles;
+    arch: builtins.all (
+      role: builtins.match "## Domain-Driven Design\n.*" (chapter arch role) != null
+    ) roles
+  ) [ "multiple" "single" ];
+
   pageOn = builtins.all (
-    cfg: cfg.files.${page}.copyMode == "copy" && builtins.pathExists cfg.files.${page}.source
-  ) [ multipleOn singleOn ];
-  pageOff = builtins.all (cfg: !(builtins.hasAttr page cfg.files)) [ multipleOff singleOff ];
+    arch:
+    let
+      cfg = configs."${arch}On";
+    in
+    cfg.files.${page}.copyMode == "copy"
+    && cfg.files.${page}.source == ../_assets + "/${arch}/ddd/${page}"
+    && builtins.pathExists cfg.files.${page}.source
+  ) [ "multiple" "single" ];
+  pageOff = builtins.all (cfg: !(builtins.hasAttr page cfg.files)) [
+    configs.multipleOff
+    configs.singleOff
+    noArchOn
+  ];
+  noArchOmitsGuidance = noArchOn.files == { };
 in
+assert sourcesMatch;
+assert sourcesExist;
 assert chapterAppended;
 assert chapterOmitted;
 assert chapterHasHeading;
-assert sourcesMatch;
-assert sourcesExist;
 assert pageOn;
 assert pageOff;
+assert noArchOmitsGuidance;
 {
   inherit
+    sourcesMatch
+    sourcesExist
     chapterAppended
     chapterOmitted
     chapterHasHeading
-    sourcesMatch
-    sourcesExist
     pageOn
     pageOff
+    noArchOmitsGuidance
     ;
 }
