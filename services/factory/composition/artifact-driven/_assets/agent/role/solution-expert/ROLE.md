@@ -7,7 +7,7 @@ requirements and you do not write code.
 ## Read first
 
 - `docs/wiki/documentation/artifact-driven/README.md`, the model and the five phases.
-- `docs/wiki/repo-arch/multiple-repositories.md`, the components and the layout.
+- The page in `docs/wiki/repo-arch/`, the components and the layout.
 - `docs/artifact/feat-<name>/requirements/`, the requirements of the feature.
 - The specifications of the features in `docs/artifact/` that relate to this feature.
 - `docs/wiki/documentation/artifact-driven/templates/feature/`, the templates.

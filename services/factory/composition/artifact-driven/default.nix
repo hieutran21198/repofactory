@@ -61,7 +61,17 @@ in
 
       # Combine the documentation model with the repo-arch seeds.
       (lib.mkIf (documentation.use == model && repo-arch.use == "single") {
-        # TODO: implement me
+        files = {
+          "AGENTS.md".source = lib.mkForce (
+            if ddd then ./_assets/single/ddd/AGENTS.md else ./_assets/single/AGENTS.md
+          );
+          "docs/README.md".source = lib.mkForce (
+            if ddd then ./_assets/ddd/docs/README.md else ./_assets/docs/README.md
+          );
+          "docs/wiki/README.md".source = lib.mkForce (
+            if ddd then ./_assets/single/ddd/docs/wiki/README.md else ./_assets/single/docs/wiki/README.md
+          );
+        };
       })
 
       # Combine the documentation model with the DDD design method.

@@ -1,6 +1,14 @@
 let
   lib = {
-    mkMerge = blocks: blocks;
+    # Merge the blocks into one config. The blocks share only the `files` key.
+    mkMerge = builtins.foldl' (
+      acc: block:
+      acc
+      // block
+      // {
+        files = (acc.files or { }) // (block.files or { });
+      }
+    ) { };
     mkIf = condition: value: if condition then value else { };
     mkForce = value: value;
     optionalString = condition: string: if condition then string else "";
@@ -26,25 +34,22 @@ let
   };
 
   evalModule =
-    method:
+    architecture: method:
     (import ../default.nix {
       inherit lib;
       config.factory.domain = {
         documentation.use = "artifact-driven";
-        repo-arch.use = "multiple";
+        repo-arch.use = architecture;
         design.use = method;
+        ci-cd.use = "unset";
       };
       namespace = "factory";
     }).config;
 
-  # The mkMerge stub returns the list of blocks: agent, multiple, single, ddd.
-  blocks = method: {
-    agent = builtins.elemAt (evalModule method) 0;
-    multiple = builtins.elemAt (evalModule method) 1;
-    ddd = builtins.elemAt (evalModule method) 3;
-  };
-  on = blocks "ddd";
-  off = blocks "unset";
+  multipleOn = evalModule "multiple" "ddd";
+  multipleOff = evalModule "multiple" "unset";
+  singleOn = evalModule "single" "ddd";
+  singleOff = evalModule "single" "unset";
 
   roles = [
     "requirement-expert"
@@ -52,34 +57,70 @@ let
   ];
   base = role: builtins.readFile (../_assets/agent/role + "/${role}/ROLE.md");
   chapter = role: builtins.readFile (../_assets/ddd/agent/role + "/${role}/ROLE.md");
-  instruction = cfg: role: cfg.agent.factory.domain.agent.role.builder.${role}.instruction;
+  instruction = cfg: role: cfg.factory.domain.agent.role.builder.${role}.instruction;
 
   guidance = [
     "AGENTS.md"
     "docs/README.md"
     "docs/wiki/README.md"
   ];
-  sourceOf = cfg: name: cfg.multiple.files.${name}.source;
+  sourceOf = cfg: name: cfg.files.${name}.source;
   page = "docs/wiki/design/ddd/artifact-driven.md";
 
-  chapterAppended = builtins.all (role: instruction on role == base role + "\n" + chapter role) roles;
-  chapterOmitted = builtins.all (role: instruction off role == base role) roles;
+  # The knowledge index does not depend on the architecture.
+  expected = {
+    multipleOn = {
+      "AGENTS.md" = ../_assets/ddd/AGENTS.md;
+      "docs/README.md" = ../_assets/ddd/docs/README.md;
+      "docs/wiki/README.md" = ../_assets/ddd/docs/wiki/README.md;
+    };
+    multipleOff = {
+      "AGENTS.md" = ../_assets/AGENTS.md;
+      "docs/README.md" = ../_assets/docs/README.md;
+      "docs/wiki/README.md" = ../_assets/docs/wiki/README.md;
+    };
+    singleOn = {
+      "AGENTS.md" = ../_assets/single/ddd/AGENTS.md;
+      "docs/README.md" = ../_assets/ddd/docs/README.md;
+      "docs/wiki/README.md" = ../_assets/single/ddd/docs/wiki/README.md;
+    };
+    singleOff = {
+      "AGENTS.md" = ../_assets/single/AGENTS.md;
+      "docs/README.md" = ../_assets/docs/README.md;
+      "docs/wiki/README.md" = ../_assets/single/docs/wiki/README.md;
+    };
+  };
+  configs = {
+    inherit
+      multipleOn
+      multipleOff
+      singleOn
+      singleOff
+      ;
+  };
+  sourcesMatch = builtins.all (
+    key: builtins.all (name: sourceOf configs.${key} name == expected.${key}.${name}) guidance
+  ) (builtins.attrNames configs);
+  sourcesExist = builtins.all (
+    key: builtins.all (name: builtins.pathExists (sourceOf configs.${key} name)) guidance
+  ) (builtins.attrNames configs);
+
+  chapterAppended = builtins.all (
+    role: instruction multipleOn role == base role + "\n" + chapter role
+  ) roles;
+  chapterOmitted = builtins.all (role: instruction multipleOff role == base role) roles;
   chapterHasHeading = builtins.all (
     role: builtins.match "## Domain-Driven Design\n.*" (chapter role) != null
   ) roles;
-  dddSources = builtins.all (name: sourceOf on name == ../_assets/ddd + "/${name}") guidance;
-  baseSources = builtins.all (name: sourceOf off name == ../_assets + "/${name}") guidance;
-  sourcesExist = builtins.all (
-    name: builtins.pathExists (sourceOf on name) && builtins.pathExists (sourceOf off name)
-  ) guidance;
-  pageOn = on.ddd.files.${page}.copyMode == "copy" && builtins.pathExists on.ddd.files.${page}.source;
-  pageOff = !(builtins.hasAttr "files" off.ddd);
+  pageOn = builtins.all (
+    cfg: cfg.files.${page}.copyMode == "copy" && builtins.pathExists cfg.files.${page}.source
+  ) [ multipleOn singleOn ];
+  pageOff = builtins.all (cfg: !(builtins.hasAttr page cfg.files)) [ multipleOff singleOff ];
 in
 assert chapterAppended;
 assert chapterOmitted;
 assert chapterHasHeading;
-assert dddSources;
-assert baseSources;
+assert sourcesMatch;
 assert sourcesExist;
 assert pageOn;
 assert pageOff;
@@ -88,8 +129,7 @@ assert pageOff;
     chapterAppended
     chapterOmitted
     chapterHasHeading
-    dddSources
-    baseSources
+    sourcesMatch
     sourcesExist
     pageOn
     pageOff
