@@ -5,8 +5,9 @@
 
 ## Description
 
-The repository blueprint combines selected domains and compositions into generated files. It owns
-the rules that decide when the artifact issue integration exists.
+The repository blueprint combines selected domains and compositions into generated files. Each
+composition owns its activation and cross-domain policies. A provider selection identifies an
+adapter but does not activate a composition.
 
 ## State transitions
 
@@ -17,9 +18,10 @@ the rules that decide when the artifact issue integration exists.
 ## Enforced invariants
 
 - One repository blueprint selects at most one project-management provider.
-- The artifact issue workflow needs the artifact-driven model and GitHub Actions.
-- Each generated provider configuration contains its required location values.
-- Each artifact type has one first status.
+- An enabled artifact issue composition needs the artifact-driven model and GitHub Actions.
+- An enabled artifact issue composition needs one supported project-management adapter.
+- Each selected adapter owns its target and credential settings.
+- The artifact issue composition gives each artifact type one first status.
 
 ## Corrective policies
 
