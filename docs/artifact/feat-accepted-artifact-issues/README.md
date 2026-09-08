@@ -11,3 +11,7 @@ issues show the artifact hierarchy and link to the accepted repository content.
 - [Specifications](specifications/README.md)
 - [Decisions](decisions/)
 - [Implementation plan](tasks/README.md)
+
+## Changes
+
+- [Composition-owned artifact policy](changes/change-composition-owned-policy/README.md)

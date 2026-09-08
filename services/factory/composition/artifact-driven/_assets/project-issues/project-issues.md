@@ -15,6 +15,34 @@ only after an artifact pull request merges.
 
 The workflow also has a manual full scan. Use it for the first setup or for recovery.
 
+## Factory configuration
+
+Select the documentation, CI, and project-management adapters. Configure the target and credential
+names in the selected project-management adapter. Then enable the project-issues composition.
+
+```nix
+factory = {
+  domain = {
+    documentation.use = "artifact-driven";
+    ci-cd.provider.use = "github-actions";
+    project-management.provider = {
+      use = "github-projects";
+      github-projects = {
+        ownership = "personal";
+        owner = "owner-name";
+        project-number = 1;
+        token-secret = "PROJECTS_TOKEN";
+      };
+    };
+  };
+
+  composition.artifact-driven.project-issues.enable = true;
+};
+```
+
+Set `factory.composition.artifact-driven.project-issues.artifact-status` to change the first
+status of an artifact type. Adapter selection alone does not enable this integration.
+
 ## GitHub Projects setup
 
 1. Make a personal or organization project.

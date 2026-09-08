@@ -1,9 +1,4 @@
-{
-  config,
-  namespace,
-  lib,
-  ...
-}:
+{ config, namespace, ... }:
 let
   inherit (config.${namespace}) _utils;
 in
@@ -29,27 +24,4 @@ in
       description = "GitHub Actions secret that contains the Projects token";
     };
   };
-
-  config =
-    let
-      inherit (config.${namespace}.domain) project-management;
-    in
-    lib.mkIf (project-management.provider.use == "github-projects") {
-      assertions = [
-        {
-          assertion = project-management.provider.github-projects.owner != "";
-          message = "${namespace}.domain.project-management.provider.github-projects.owner must not be empty";
-        }
-        {
-          assertion = project-management.provider.github-projects.project-number > 0;
-          message = "${namespace}.domain.project-management.provider.github-projects.project-number must be positive";
-        }
-        {
-          assertion =
-            builtins.match "[A-Za-z_][A-Za-z0-9_]*" project-management.provider.github-projects.token-secret
-            != null;
-          message = "${namespace}.domain.project-management.provider.github-projects.token-secret must be a GitHub secret name";
-        }
-      ];
-    };
 }

@@ -4,7 +4,7 @@
 
 | Step | Task | Depends on |
 | --- | --- | --- |
-| 1 | [Define project-management options](task-project-options.md) | - |
+| 1 | [Define provider and composition options](task-project-options.md) | - |
 | 2 | [Build the artifact synchronizer](task-artifact-synchronizer.md) | 1 |
 | 3 | [Add the GitHub Projects adapter](task-github-projects.md) | 2 |
 | 4 | [Add the Trello adapter](task-trello.md) | 2 |

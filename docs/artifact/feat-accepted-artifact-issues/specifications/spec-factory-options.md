@@ -7,43 +7,48 @@
 
 ## Description
 
-The project-management domain supplies provider location, credential names, and artifact status
-options. The artifact-driven composition emits the workflow, synchronizer, configuration, and
-setup guide.
+The project-management domain selects an adapter. Each adapter supplies its location and
+credential-name options. The artifact-driven project-issues composition owns its activation and
+artifact status policy. It emits the workflow, synchronizer, configuration, and setup guide.
 
 ## Contract
 
 ```nix
-factory.domain.project-management = {
-  artifact-status = {
-    feature-summary = "Accepted";
-    master-requirement = "Accepted";
-    requirement = "Accepted";
-    master-specification = "Accepted";
-    specification = "Accepted";
-    decision = "Accepted";
-    implementation-plan = "Accepted";
-    task = "Ready";
-    change-summary = "Accepted";
-    withdrawn = "Withdrawn";
+factory = {
+  domain = {
+    documentation.use = "artifact-driven";
+    ci-cd.provider.use = "github-actions";
+    project-management.provider = {
+      use = "github-projects";
+      github-projects = {
+        ownership = "personal"; # or "organization"
+        owner = "owner-name";
+        project-number = 1;
+        token-secret = "PROJECTS_TOKEN";
+      };
+    };
   };
 
-  provider.github-projects = {
-    ownership = "personal"; # or "organization"
-    owner = "owner-name";
-    project-number = 1;
-    token-secret = "PROJECTS_TOKEN";
-  };
-
-  provider.trello = {
-    board-id = "board-id";
-    api-key-secret = "TRELLO_API_KEY";
-    token-secret = "TRELLO_TOKEN";
+  composition.artifact-driven.project-issues = {
+    enable = true;
+    artifact-status = {
+      feature-summary = "Accepted";
+      master-requirement = "Accepted";
+      requirement = "Accepted";
+      master-specification = "Accepted";
+      specification = "Accepted";
+      decision = "Accepted";
+      implementation-plan = "Accepted";
+      task = "Ready";
+      change-summary = "Accepted";
+      withdrawn = "Withdrawn";
+    };
   };
 };
 ```
 
-Emit these generated files only for the complete supported selection:
+`project-issues.enable` defaults to `false`. Selecting adapters does not enable this composition.
+Emit these generated files only when the composition is enabled:
 
 - `.github/workflows/accepted-artifact-issues.yml`
 - `.github/artifact-issues/sync.py`
@@ -52,5 +57,8 @@ Emit these generated files only for the complete supported selection:
 
 ## Errors
 
-- Stop Nix evaluation when a selected provider has no required location value.
-- Emit no integration files when the documentation model or CI provider does not match.
+- When enabled, stop Nix evaluation if the documentation model, CI provider, or project provider
+  is not supported.
+- When enabled, stop Nix evaluation when a status is empty or the selected adapter settings are
+  not valid.
+- When disabled, emit no integration files and do not apply composition preconditions.

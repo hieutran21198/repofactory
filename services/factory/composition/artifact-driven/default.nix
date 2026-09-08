@@ -5,6 +5,7 @@
   ...
 }:
 let
+  inherit (config.${namespace}) _utils;
   model = "artifact-driven";
   workflow =
     provider: tokenSecret:
@@ -53,6 +54,25 @@ let
     '';
 in
 {
+  options.${namespace}.composition.artifact-driven.project-issues = {
+    enable = _utils.mkBoolOpt {
+      default = false;
+      description = "Whether to synchronize accepted artifacts to the selected project-management provider";
+    };
+    artifact-status = {
+      feature-summary = _utils.mkStrOpt { default = "Accepted"; };
+      master-requirement = _utils.mkStrOpt { default = "Accepted"; };
+      requirement = _utils.mkStrOpt { default = "Accepted"; };
+      master-specification = _utils.mkStrOpt { default = "Accepted"; };
+      specification = _utils.mkStrOpt { default = "Accepted"; };
+      decision = _utils.mkStrOpt { default = "Accepted"; };
+      implementation-plan = _utils.mkStrOpt { default = "Accepted"; };
+      task = _utils.mkStrOpt { default = "Ready"; };
+      change-summary = _utils.mkStrOpt { default = "Accepted"; };
+      withdrawn = _utils.mkStrOpt { default = "Withdrawn"; };
+    };
+  };
+
   config =
     let
       inherit (config.${namespace}.domain)
@@ -64,18 +84,13 @@ in
         ;
       ddd = design.use == "ddd";
       projectProvider = project-management.provider.use;
-      artifactIssues =
-        documentation.use == model
-        && ci-cd.provider.use == "github-actions"
-        && builtins.elem projectProvider [
-          "github-projects"
-          "trello"
-        ];
+      projectIssues = config.${namespace}.composition.artifact-driven.project-issues;
+      artifactIssues = projectIssues.enable;
       githubProjects = project-management.provider.github-projects;
       trello = project-management.provider.trello;
       projectConfig = {
         provider = projectProvider;
-        statuses = project-management.artifact-status;
+        statuses = projectIssues.artifact-status;
         githubProjects = {
           inherit (githubProjects) ownership owner;
           projectNumber = githubProjects.project-number;
@@ -86,6 +101,68 @@ in
       };
     in
     lib.mkMerge [
+      (lib.mkIf artifactIssues {
+        assertions = [
+          {
+            assertion = documentation.use == model;
+            message = "${namespace}.composition.artifact-driven.project-issues requires ${namespace}.domain.documentation.use = \"artifact-driven\"";
+          }
+          {
+            assertion = ci-cd.provider.use == "github-actions";
+            message = "${namespace}.composition.artifact-driven.project-issues requires ${namespace}.domain.ci-cd.provider.use = \"github-actions\"";
+          }
+          {
+            assertion = builtins.elem projectProvider [
+              "github-projects"
+              "trello"
+            ];
+            message = "${namespace}.composition.artifact-driven.project-issues requires a supported project-management provider";
+          }
+        ]
+        ++ builtins.map (name: {
+          assertion = projectIssues.artifact-status.${name} != "";
+          message = "${namespace}.composition.artifact-driven.project-issues.artifact-status.${name} must not be empty";
+        }) (builtins.attrNames projectIssues.artifact-status)
+        ++ (
+          if projectProvider == "github-projects" then
+            [
+              {
+                assertion = githubProjects.owner != "";
+                message = "${namespace}.domain.project-management.provider.github-projects.owner must not be empty when project issues are enabled";
+              }
+              {
+                assertion = githubProjects.project-number > 0;
+                message = "${namespace}.domain.project-management.provider.github-projects.project-number must be positive when project issues are enabled";
+              }
+              {
+                assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" githubProjects.token-secret != null;
+                message = "${namespace}.domain.project-management.provider.github-projects.token-secret must be a GitHub secret name";
+              }
+            ]
+          else
+            [ ]
+        )
+        ++ (
+          if projectProvider == "trello" then
+            [
+              {
+                assertion = trello.board-id != "";
+                message = "${namespace}.domain.project-management.provider.trello.board-id must not be empty when project issues are enabled";
+              }
+              {
+                assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" trello.api-key-secret != null;
+                message = "${namespace}.domain.project-management.provider.trello.api-key-secret must be a GitHub secret name";
+              }
+              {
+                assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" trello.token-secret != null;
+                message = "${namespace}.domain.project-management.provider.trello.token-secret must be a GitHub secret name";
+              }
+            ]
+          else
+            [ ]
+        );
+      })
+
       # agent
       (lib.mkIf (documentation.use == model) {
         ${namespace}.domain = {
