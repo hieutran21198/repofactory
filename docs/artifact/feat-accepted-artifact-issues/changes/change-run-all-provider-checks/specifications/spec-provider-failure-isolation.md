@@ -21,6 +21,9 @@ the Project API apply status field updates after the workflow completes.
 
 The inspector reports the last assertion error when the retry limit expires.
 
+The Trello adapter uses `shortUrl` for parent and checklist links. This URL stays stable when a
+card title changes.
+
 ## Errors
 
 - Keep the data from a failed provider for inspection.

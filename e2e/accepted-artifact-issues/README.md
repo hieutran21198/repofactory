@@ -49,6 +49,9 @@ Run the two provider checks:
 python3 accepted-artifact-issues/e2e.py test
 ```
 
+The default command attempts both providers. If one provider fails, the command checks the other
+provider before it reports a nonzero exit status.
+
 Run one provider check:
 
 ```console

@@ -18,6 +18,7 @@ status, and card links for the logical artifact hierarchy. It supports Trello Fr
 - Put the artifact path, type, feature, source links, acceptance links, and marker in the description.
 - Put the parent card URL and artifact path in each child card.
 - Put each child card URL in a `Children` checklist on its parent card.
+- Use the stable Trello short URL for parent and child card links.
 - Move a withdrawn card to the configured list before the adapter archives it.
 - Do not create, read, update, or delete Trello Custom Fields.
 

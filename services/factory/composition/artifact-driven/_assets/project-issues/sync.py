@@ -388,7 +388,7 @@ class TrelloAdapter:
         card = self.cards.get(path)
         if card is None:
             return None
-        return IssueRef(card["id"], card.get("url") or card["shortUrl"], False, card.get("desc") or "")
+        return IssueRef(card["id"], card.get("shortUrl") or card["url"], False, card.get("desc") or "")
 
     def upsert(
         self,
@@ -412,7 +412,7 @@ class TrelloAdapter:
         if old_path and old_path != artifact.path:
             self.cards.pop(old_path, None)
         self.cards[artifact.path] = card
-        return IssueRef(card["id"], card.get("url") or card["shortUrl"], created, card.get("desc") or body)
+        return IssueRef(card["id"], card.get("shortUrl") or card["url"], created, card.get("desc") or body)
 
     def link(self, parent: IssueRef, child: IssueRef) -> None:
         checklists = self.call("GET", f"/cards/{parent.id}/checklists?checkItems=all")

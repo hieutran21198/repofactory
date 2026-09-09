@@ -190,7 +190,13 @@ class TrelloAdapterTest(unittest.TestCase):
                     {"id": "withdrawn", "name": "Withdrawn", "closed": False},
                 ],
                 [],
-                {"id": "card", "desc": body, "url": "https://trello/card", "closed": False},
+                {
+                    "id": "card",
+                    "desc": body,
+                    "url": "https://trello/card-title",
+                    "shortUrl": "https://trello/c/card",
+                    "closed": False,
+                },
             ]
         )
         adapter = MODULE.TrelloAdapter({"boardId": "board"}, "owner/repo", api)
@@ -199,6 +205,7 @@ class TrelloAdapterTest(unittest.TestCase):
         ref = adapter.upsert(artifact, "Feature: Login", body, "Accepted")
 
         self.assertEqual("card", ref.id)
+        self.assertEqual("https://trello/c/card", ref.url)
         method, url, payload = api.requests[-1]
         self.assertEqual("POST", method)
         self.assertIn("/cards?", url)

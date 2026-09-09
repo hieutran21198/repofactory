@@ -50,8 +50,7 @@ The GitHub account is `hieutran21198`. The component uses these persistent resou
 The GitHub Project has one single-select field named `Status`. The field has the options
 `Accepted`, `Ready`, and `Withdrawn`.
 
-The Trello board has one open list for each status. It has the text fields `Artifact path`,
-`Artifact type`, and `Parent artifact`.
+The Trello board has one open list for each status. Card descriptions contain artifact metadata.
 
 The state file can contain resources for one provider or both providers. Setup keeps resources for
 providers that it does not select.
@@ -75,8 +74,9 @@ comment. A second run must not make a duplicate provider item or a duplicate man
 
 ## Failures
 
-The command stops with a nonzero exit status if a setup check or an assertion fails. It shows the
-resource URLs and the failed step. It does not delete the provider resources after a failure.
+The command returns a nonzero exit status if a setup check or an assertion fails. It attempts all
+selected providers before it reports provider errors. It shows the resource URLs and failed steps.
+It does not delete the provider resources after a failure.
 
 The command waits a maximum of ten minutes for one workflow. It increases the delay between API
-requests during the wait.
+requests during the wait. The GitHub Projects inspector retries item assertions for a limited time.

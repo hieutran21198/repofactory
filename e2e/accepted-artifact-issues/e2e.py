@@ -555,6 +555,19 @@ def marker_path(repository: str, body: str) -> str | None:
     return match.group(1) if match else None
 
 
+def retry_check(
+    check: Callable[[], Any], timeout: float = 60.0, delay: float = 2.0
+) -> Any:
+    deadline = time.time() + timeout
+    while True:
+        try:
+            return check()
+        except CheckError:
+            if time.time() >= deadline:
+                raise
+            time.sleep(delay)
+
+
 def artifact_metadata(path: str) -> tuple[str, str | None]:
     source = Path(path)
     root = "/".join(source.parts[:3])
@@ -666,23 +679,27 @@ class GitHubInspector:
         expected: dict[str, str],
         identities: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        issues = self.issues()
-        project, items = self.project()
-        selected = {path: issue for path, issue in issues.items() if path in expected}
-        if set(selected) != set(expected):
-            raise CheckError(
-                f"GitHub issue paths differ: expected {sorted(expected)}, got {sorted(selected)}"
-            )
-        result: dict[str, Any] = {}
-        for path, status in expected.items():
-            issue = selected[path]
-            result[path] = issue["id"]
-            if identities and path in identities and issue["id"] != identities[path]:
-                raise CheckError(f"GitHub changed the issue identity for {path}")
-            item = items.get(issue["id"])
-            if not item or item["values"].get("Status") != status:
-                raise CheckError(f"GitHub issue {path} does not have status {status}")
-        return result
+        def check() -> dict[str, Any]:
+            issues = self.issues()
+            project, items = self.project()
+            selected = {path: issue for path, issue in issues.items() if path in expected}
+            if set(selected) != set(expected):
+                raise CheckError(
+                    f"GitHub issue paths differ: expected {sorted(expected)}, "
+                    f"got {sorted(selected)}"
+                )
+            result: dict[str, Any] = {}
+            for path, status in expected.items():
+                issue = selected[path]
+                result[path] = issue["id"]
+                if identities and path in identities and issue["id"] != identities[path]:
+                    raise CheckError(f"GitHub changed the issue identity for {path}")
+                item = items.get(issue["id"])
+                if not item or item["values"].get("Status") != status:
+                    raise CheckError(f"GitHub issue {path} does not have status {status}")
+            return result
+
+        return retry_check(check)
 
     def assert_link(self, parent: str, child: str) -> None:
         issues = self.issues()
@@ -764,7 +781,7 @@ class TrelloInspector:
                 parent_card = cards.get(parent)
                 if parent_card is None:
                     raise CheckError(f"Trello card {path} does not have its parent card")
-                parent_url = parent_card.get("url") or parent_card["shortUrl"]
+                parent_url = parent_card.get("shortUrl") or parent_card["url"]
                 required.append(f"- Parent artifact: [`{parent}`]({parent_url})")
             for value in required:
                 if value not in description:
@@ -777,7 +794,7 @@ class TrelloInspector:
             "GET", f"/cards/{cards[parent]['id']}/checklists?checkItems=all"
         )
         children = [item for item in checklists if item["name"] == "Children"]
-        child_url = cards[child].get("url") or cards[child]["shortUrl"]
+        child_url = cards[child].get("shortUrl") or cards[child]["url"]
         if len(children) != 1 or not any(
             child_url in item["name"] for item in children[0].get("checkItems", [])
         ):
@@ -1148,6 +1165,22 @@ def check_provider_state(provider: str, state: dict[str, Any]) -> None:
         raise CheckError(f"Run setup for {provider} before this command")
 
 
+def collect_provider_reports(
+    providers: list[str], check: Callable[[str], dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[str]]:
+    reports: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for provider in providers:
+        try:
+            reports.append(check(provider))
+        except (CheckError, KeyError, OSError, ValueError) as error:
+            message = str(error)
+            reports.append({"provider": provider, "status": "failed", "error": message})
+            errors.append(f"{provider}: {message}")
+            log(f"FAIL {provider}: {message}")
+    return reports, errors
+
+
 def main() -> int:
     args = parse_args()
     try:
@@ -1174,9 +1207,14 @@ def main() -> int:
             "providers": [],
         }
         try:
-            for provider in providers:
+            def check(provider: str) -> dict[str, Any]:
                 deploy(provider, state)
-                report["providers"].append(run_provider(provider, state))
+                return run_provider(provider, state)
+
+            provider_reports, provider_errors = collect_provider_reports(providers, check)
+            report["providers"].extend(provider_reports)
+            if provider_errors:
+                raise CheckError("; ".join(provider_errors))
         except (CheckError, KeyError, OSError, ValueError) as error:
             report["status"] = "failed"
             report["error"] = str(error)

@@ -14,8 +14,9 @@ Run every selected provider and tolerate short GitHub Projects API delays.
 2. Add each provider result to the report.
 3. Report the collected errors after all provider executions.
 4. Retry GitHub Projects item assertions for a limited time.
-5. Add unit tests for provider failure isolation and assertion retries.
-6. Update the end-to-end specification and instructions.
+5. Use stable Trello short URLs for hierarchy links.
+6. Add unit tests for provider failure isolation and assertion retries.
+7. Update the end-to-end specification and instructions.
 
 ## Check
 

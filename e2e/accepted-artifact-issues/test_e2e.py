@@ -94,6 +94,36 @@ class PureFunctionTest(unittest.TestCase):
             MODULE.artifact_metadata(f"{root}/requirements/req-a.md"),
         )
 
+    def test_retries_a_provider_assertion(self):
+        attempts = []
+
+        def check():
+            attempts.append(len(attempts) + 1)
+            if len(attempts) < 3:
+                raise MODULE.CheckError("not ready")
+            return "ready"
+
+        self.assertEqual("ready", MODULE.retry_check(check, timeout=1, delay=0))
+        self.assertEqual([1, 2, 3], attempts)
+
+    def test_runs_second_provider_after_first_provider_fails(self):
+        attempts = []
+
+        def check(provider):
+            attempts.append(provider)
+            if provider == "github-projects":
+                raise MODULE.CheckError("status is not ready")
+            return {"provider": provider, "status": "passed"}
+
+        reports, errors = MODULE.collect_provider_reports(
+            ["github-projects", "trello"], check
+        )
+
+        self.assertEqual(["github-projects", "trello"], attempts)
+        self.assertEqual("failed", reports[0]["status"])
+        self.assertEqual("passed", reports[1]["status"])
+        self.assertEqual(["github-projects: status is not ready"], errors)
+
 
 class FakeTrelloApi:
     def __init__(self):
