@@ -17,14 +17,17 @@ closes GitHub issues and archives Trello cards when cleanup is necessary.
 
 The component has these commands:
 
-- `setup` creates or checks the test repositories, the GitHub Project, and the Trello board.
+- `setup` creates or checks resources for one provider or both providers.
 - `test` checks one provider or both providers.
 - `cleanup` removes test branches and closes or archives test items.
 
-The `test` command accepts `--provider github-projects`, `--provider trello`, or `--provider all`.
-The default value is `all`. The command checks the providers in sequence.
+Each command accepts `--provider github-projects`, `--provider trello`, or `--provider all`. The
+default value is `all`. A command that selects both providers checks them in sequence.
 
 ## Credential contract
+
+All commands read `GH_TOKEN` because each provider uses a GitHub repository. Commands that select
+Trello also read `TRELLO_API_KEY` and `TRELLO_TOKEN`.
 
 The component reads these environment variables:
 
@@ -32,8 +35,8 @@ The component reads these environment variables:
 - `TRELLO_API_KEY` contains a Trello API key.
 - `TRELLO_TOKEN` contains a Trello user token.
 
-The component must not write a credential to a file or to the output. The setup command writes the
-credentials to the applicable GitHub Actions secrets.
+The component must not write a credential to a file or to the output. The setup command writes
+credentials only to GitHub Actions secrets for the selected providers.
 
 ## Resource contract
 
@@ -49,6 +52,9 @@ The GitHub Project has one single-select field named `Status`. The field has the
 
 The Trello board has one open list for each status. It has the text fields `Artifact path`,
 `Artifact type`, and `Parent artifact`.
+
+The state file can contain resources for one provider or both providers. Setup keeps resources for
+providers that it does not select.
 
 ## Check contract
 

@@ -118,6 +118,16 @@ def load_state() -> dict[str, Any]:
     return json.loads(STATE_PATH.read_text())
 
 
+def load_setup_state() -> dict[str, Any]:
+    if not STATE_PATH.exists():
+        return {"owner": OWNER, "repositories": {}}
+    state = load_state()
+    if state.get("owner") != OWNER:
+        raise CheckError(f"The state file must use the GitHub account {OWNER}")
+    state.setdefault("repositories", {})
+    return state
+
+
 def save_state(state: dict[str, Any]) -> None:
     STATE_PATH.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
 
@@ -360,10 +370,10 @@ def render_files(provider: str, state: dict[str, Any]) -> dict[str, str]:
         OWNER,
         "--arg",
         "projectNumber",
-        str(state["github_project"]["number"]),
+        str(state.get("github_project", {}).get("number", 1)),
         "--argstr",
         "trelloBoard",
-        state["trello_board"]["id"],
+        state.get("trello_board", {}).get("id", "unused"),
     ]
     return json.loads(run_command(args))
 
@@ -378,33 +388,51 @@ def deploy(provider: str, state: dict[str, Any]) -> None:
         put_file(repository, path, content, default_branch, "test: deploy generated integration")
 
 
-def setup() -> dict[str, Any]:
-    need_environment(["GH_TOKEN", "TRELLO_API_KEY", "TRELLO_TOKEN"])
-    ensure_github_account()
-    repositories = {
-        provider: ensure_repository(name) for provider, name in REPOSITORIES.items()
-    }
-    project = ensure_project()
-    trello = TrelloApi()
-    board = ensure_trello_board(trello)
-    state = {
-        "owner": OWNER,
-        "repositories": {
-            provider: {
-                "name": data["name"],
-                "url": data["html_url"],
-                "default_branch": data["default_branch"],
-            }
-            for provider, data in repositories.items()
-        },
-        "github_project": {
+def setup_environment(providers: list[str]) -> list[str]:
+    names = ["GH_TOKEN"]
+    if "trello" in providers:
+        names.extend(["TRELLO_API_KEY", "TRELLO_TOKEN"])
+    return names
+
+
+def merge_setup_state(
+    state: dict[str, Any],
+    repositories: dict[str, dict[str, Any]],
+    project: dict[str, Any] | None = None,
+    board: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    for provider, data in repositories.items():
+        state["repositories"][provider] = {
+            "name": data["name"],
+            "url": data["html_url"],
+            "default_branch": data["default_branch"],
+        }
+    if project is not None:
+        state["github_project"] = {
             "id": project["id"],
             "number": project["number"],
             "url": project["url"],
-        },
-        "trello_board": {"id": board["id"], "url": board["url"]},
+        }
+    if board is not None:
+        state["trello_board"] = {"id": board["id"], "url": board["url"]}
+    return state
+
+
+def setup(providers: list[str]) -> dict[str, Any]:
+    need_environment(setup_environment(providers))
+    ensure_github_account()
+    state = load_setup_state()
+    repositories = {
+        provider: ensure_repository(REPOSITORIES[provider]) for provider in providers
     }
-    for provider in REPOSITORIES:
+    project = None
+    board = None
+    if "github-projects" in providers:
+        project = ensure_project()
+    if "trello" in providers:
+        board = ensure_trello_board(TrelloApi())
+    merge_setup_state(state, repositories, project, board)
+    for provider in providers:
         repository = repository_path(provider)
         if provider == "github-projects":
             set_secret(repository, "PROJECTS_TOKEN", os.environ["GH_TOKEN"])
@@ -413,8 +441,10 @@ def setup() -> dict[str, Any]:
             set_secret(repository, "TRELLO_TOKEN", os.environ["TRELLO_TOKEN"])
         deploy(provider, state)
     save_state(state)
-    log(f"GitHub Project: {project['url']}")
-    log(f"Trello board: {board['url']}")
+    if "github-projects" in providers:
+        log(f"GitHub Project: {state['github_project']['url']}")
+    if "trello" in providers:
+        log(f"Trello board: {state['trello_board']['url']}")
     return state
 
 
@@ -1087,17 +1117,24 @@ def write_report(report: dict[str, Any]) -> Path:
     return path
 
 
+def add_provider_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--provider",
+        choices=("all", "github-projects", "trello"),
+        default="all",
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("setup", help="Create or check the live test resources")
+    setup_parser = subparsers.add_parser(
+        "setup", help="Create or check the live test resources"
+    )
+    add_provider_argument(setup_parser)
     for command in ("test", "cleanup"):
         child = subparsers.add_parser(command, help=f"{command.title()} the live test resources")
-        child.add_argument(
-            "--provider",
-            choices=("all", "github-projects", "trello"),
-            default="all",
-        )
+        add_provider_argument(child)
     return parser.parse_args()
 
 
@@ -1105,20 +1142,30 @@ def selected_providers(value: str) -> list[str]:
     return list(REPOSITORIES) if value == "all" else [value]
 
 
+def check_provider_state(provider: str, state: dict[str, Any]) -> None:
+    if provider not in state.get("repositories", {}):
+        raise CheckError(f"Run setup for {provider} before this command")
+    resource = "github_project" if provider == "github-projects" else "trello_board"
+    if resource not in state:
+        raise CheckError(f"Run setup for {provider} before this command")
+
+
 def main() -> int:
     args = parse_args()
     try:
+        providers = selected_providers(args.provider)
         if args.command == "setup":
-            setup()
+            setup(providers)
             return 0
         need_environment(["GH_TOKEN"])
         state = load_state()
         if state.get("owner") != OWNER:
             raise CheckError(f"The state file must use the GitHub account {OWNER}")
         ensure_github_account()
-        providers = selected_providers(args.provider)
         if "trello" in providers:
             need_environment(["TRELLO_API_KEY", "TRELLO_TOKEN"])
+        for provider in providers:
+            check_provider_state(provider, state)
         if args.command == "cleanup":
             for provider in providers:
                 cleanup_provider(provider, state)

@@ -19,6 +19,47 @@ class PureFunctionTest(unittest.TestCase):
             MODULE.selected_providers("all"),
         )
 
+    def test_selects_setup_environment_for_github_projects(self):
+        self.assertEqual(
+            ["GH_TOKEN"],
+            MODULE.setup_environment(["github-projects"]),
+        )
+
+    def test_selects_setup_environment_for_trello(self):
+        self.assertEqual(
+            ["GH_TOKEN", "TRELLO_API_KEY", "TRELLO_TOKEN"],
+            MODULE.setup_environment(["trello"]),
+        )
+
+    def test_merges_setup_state_without_removing_other_provider(self):
+        state = {
+            "owner": MODULE.OWNER,
+            "repositories": {"trello": {"default_branch": "main"}},
+            "trello_board": {"id": "board", "url": "https://trello.example/board"},
+        }
+        repositories = {
+            "github-projects": {
+                "name": "repository",
+                "html_url": "https://github.example/repository",
+                "default_branch": "main",
+            }
+        }
+        project = {
+            "id": "project",
+            "number": 7,
+            "url": "https://github.example/project",
+        }
+
+        MODULE.merge_setup_state(state, repositories, project)
+
+        self.assertIn("trello", state["repositories"])
+        self.assertEqual("board", state["trello_board"]["id"])
+        self.assertEqual("project", state["github_project"]["id"])
+
+    def test_rejects_provider_without_setup_state(self):
+        with self.assertRaisesRegex(MODULE.CheckError, "Run setup for trello"):
+            MODULE.check_provider_state("trello", {"repositories": {}})
+
     def test_extracts_only_the_marker_for_the_repository(self):
         body = "<!-- repofactory:artifact:owner/repo:docs/artifact/feat-a/README.md -->"
         self.assertEqual(
@@ -44,6 +85,14 @@ class PureFunctionTest(unittest.TestCase):
 
 
 class RendererTest(unittest.TestCase):
+    def test_renders_github_projects_without_trello_state(self):
+        files = MODULE.render_files(
+            "github-projects",
+            {"github_project": {"number": 7}},
+        )
+        config = json.loads(files[".github/artifact-issues/config.json"])
+        self.assertEqual("github-projects", config["provider"])
+
     def test_renders_each_provider_from_the_factory_module(self):
         state = {
             "github_project": {"number": 7},

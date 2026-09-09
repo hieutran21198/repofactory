@@ -10,8 +10,8 @@ The commands change live GitHub and Trello data. Use only the specified test res
 1. Make a classic GitHub personal access token.
 2. Give the token the `repo`, `project`, and `workflow` scopes.
 3. Set `GH_TOKEN` to the token value.
-4. Make a Trello API key and a Trello user token.
-5. Set `TRELLO_API_KEY` and `TRELLO_TOKEN` to the Trello values.
+4. To use Trello, make a Trello API key and a Trello user token.
+5. To use Trello, set `TRELLO_API_KEY` and `TRELLO_TOKEN` to the Trello values.
 6. Enter this `e2e/` directory.
 7. Start the development environment with `devenv shell`.
 
@@ -24,6 +24,21 @@ Create or check all resources:
 ```console
 python3 accepted-artifact-issues/e2e.py setup
 ```
+
+Create or check only the GitHub Projects resources:
+
+```console
+python3 accepted-artifact-issues/e2e.py setup --provider github-projects
+```
+
+Create or check only the Trello resources:
+
+```console
+python3 accepted-artifact-issues/e2e.py setup --provider trello
+```
+
+All setup selections need `GH_TOKEN` because each provider uses a GitHub repository. Only the
+Trello selection needs the Trello credentials.
 
 Run the two provider checks:
 
