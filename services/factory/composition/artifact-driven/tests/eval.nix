@@ -322,6 +322,17 @@ let
     &&
       builtins.match ".*TRELLO_API_KEY:.*TRELLO_API_KEY.*"
         trelloOn.files.".github/workflows/accepted-artifact-issues.yml".text != null;
+  workflowsCanWritePullRequestComments =
+    builtins.all
+      (
+        cfg:
+        builtins.match ".*pull-requests: write.*"
+          cfg.files.".github/workflows/accepted-artifact-issues.yml".text != null
+      )
+      [
+        githubOn
+        trelloOn
+      ];
   credentialGuide =
     githubOn.files."docs/wiki/documentation/artifact-driven/project-issue-credentials.md";
   credentialGuideMatches =
@@ -391,6 +402,7 @@ assert adapterSelectionPassive;
 assert invalidSetupsRejected;
 assert providerConfigMatches;
 assert workflowsUseSelectedSecrets;
+assert workflowsCanWritePullRequestComments;
 assert credentialGuideMatches;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
@@ -416,6 +428,7 @@ assert solutionExpertNamesSkill;
     invalidSetupsRejected
     providerConfigMatches
     workflowsUseSelectedSecrets
+    workflowsCanWritePullRequestComments
     credentialGuideMatches
     compositionOwnsPolicy
     providerDoesNotOwnPolicy

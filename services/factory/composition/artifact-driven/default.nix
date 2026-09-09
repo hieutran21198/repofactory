@@ -30,7 +30,7 @@ let
       permissions:
         contents: read
         issues: write
-        pull-requests: read
+        pull-requests: write
 
       concurrency:
         group: accepted-artifact-issues-''${{ github.repository }}-''${{ github.event.pull_request.number || 'scan' }}

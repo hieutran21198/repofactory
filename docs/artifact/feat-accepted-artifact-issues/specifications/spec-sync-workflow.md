@@ -16,6 +16,9 @@ The workflow uses `pull_request_target` with activity `closed`. It continues onl
 request merged. It checks out the trusted merge commit and never runs content from an unmerged
 pull request.
 
+The workflow gives its automatic `GITHUB_TOKEN` write access to issues and pull requests. It uses
+the pull request access only for the managed comment.
+
 For each changed artifact:
 
 1. Make each missing parent issue from the accepted tree.

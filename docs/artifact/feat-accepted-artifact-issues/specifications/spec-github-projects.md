@@ -12,7 +12,8 @@ one GitHub Project. The project `Status` field supplies the configured artifact 
 
 ## Contract
 
-- Use `GITHUB_TOKEN` with issue write access for repository issues and pull request comments.
+- Use `GITHUB_TOKEN` with issue write access for repository issues.
+- Give `GITHUB_TOKEN` pull request write access for the managed pull request comment.
 - Use the configured PAT secret for GitHub Project GraphQL calls.
 - Find the project by owner type, owner name, and project number.
 - Require one single-select field named `Status`.
