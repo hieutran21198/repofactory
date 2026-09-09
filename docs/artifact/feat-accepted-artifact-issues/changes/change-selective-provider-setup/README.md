@@ -15,4 +15,5 @@ sets up both providers.
 ## Artifacts
 
 - [Requirements](requirements/README.md)
+- [Specifications](specifications/README.md)
 
