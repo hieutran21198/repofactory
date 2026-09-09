@@ -32,6 +32,7 @@ TRELLO_LABEL_COLORS = {
         "green", "sky", "pink", "lime",
     ))
 }
+IMPLEMENTATION_KINDS = {"implementation-plan", "task"}
 
 
 def type_label(kind: str) -> str:
@@ -389,9 +390,14 @@ class TrelloAdapter:
         self.key = os.environ.get("TRELLO_API_KEY", "")
         self.token = os.environ.get("TRELLO_TOKEN", "")
         self.base = "https://api.trello.com/1"
-        self.lists: dict[str, str] = {}
         self.cards: dict[str, dict[str, Any]] = {}
-        self.labels: dict[str, dict[str, Any]] = {}
+        self.boards: dict[str, dict[str, Any]] = {}
+
+    def board_for(self, kind: str) -> str:
+        implementation = self.config.get("implementationBoardId", "")
+        if implementation and kind in IMPLEMENTATION_KINDS:
+            return implementation
+        return self.config["boardId"]
 
     def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> Any:
         separator = "&" if "?" in path else "?"
@@ -401,47 +407,53 @@ class TrelloAdapter:
     def preflight(self, statuses: dict[str, str]) -> None:
         if not self.key or not self.token:
             fail("TRELLO_API_KEY and TRELLO_TOKEN must not be empty")
-        board = self.config["boardId"]
-        lists = self.call("GET", f"/boards/{board}/lists?filter=all")
-        by_name: dict[str, list[str]] = {}
-        for item in lists:
-            if not item.get("closed"):
-                by_name.setdefault(item["name"], []).append(item["id"])
-        missing = []
-        for status in set(statuses.values()):
-            matches = by_name.get(status, [])
-            if len(matches) != 1:
-                missing.append(status)
-            else:
-                self.lists[status] = matches[0]
-        if missing:
-            fail("The Trello board needs one open list for each status: " + ", ".join(sorted(missing)))
-        board_labels = self.call("GET", f"/boards/{board}/labels?limit=1000&fields=id,name,color")
-        by_label: dict[str, list[dict[str, Any]]] = {}
-        for label in board_labels:
-            if label.get("name", "").startswith(LABEL_PREFIX):
-                by_label.setdefault(label["name"], []).append(label)
-        for kind, color in TRELLO_LABEL_COLORS.items():
-            name = type_label(kind)
-            matches = by_label.get(name, [])
-            if len(matches) > 1:
-                fail(f"The Trello board has duplicate managed labels named {name}")
-            if matches:
-                self.labels[name] = matches[0]
-            else:
-                self.labels[name] = self.call("POST", "/labels", {
-                    "name": name, "color": color, "idBoard": board,
-                })
         marker_prefix = re.escape(f"<!-- repofactory:artifact:{self.repository}:")
         marker_pattern = re.compile(marker_prefix + r"(.+) -->")
-        cards = self.call("GET", f"/boards/{board}/cards?filter=all&fields=id,name,desc,url,shortUrl,closed,idLabels")
-        for card in cards:
-            match = marker_pattern.search(card.get("desc") or "")
-            if match:
-                path = match.group(1)
-                if path in self.cards:
-                    fail(f"Two Trello cards have the artifact marker for {path}")
-                self.cards[path] = card
+        board_kinds: dict[str, set[str]] = {}
+        for kind in ARTIFACT_KINDS:
+            board_kinds.setdefault(self.board_for(kind), set()).add(kind)
+        for board, kinds in board_kinds.items():
+            context = {"lists": {}, "labels": {}}
+            self.boards[board] = context
+            lists = self.call("GET", f"/boards/{board}/lists?filter=all")
+            by_name: dict[str, list[str]] = {}
+            for item in lists:
+                if not item.get("closed"):
+                    by_name.setdefault(item["name"], []).append(item["id"])
+            required = {statuses[kind] for kind in kinds if kind in statuses} | {statuses["withdrawn"]}
+            missing = []
+            for status in required:
+                matches = by_name.get(status, [])
+                if len(matches) != 1:
+                    missing.append(status)
+                else:
+                    context["lists"][status] = matches[0]
+            if missing:
+                fail(f"The Trello board {board} needs one open list for each status: " + ", ".join(sorted(missing)))
+            board_labels = self.call("GET", f"/boards/{board}/labels?limit=1000&fields=id,name,color")
+            by_label: dict[str, list[dict[str, Any]]] = {}
+            for label in board_labels:
+                if label.get("name", "").startswith(LABEL_PREFIX):
+                    by_label.setdefault(label["name"], []).append(label)
+            for name, matches in by_label.items():
+                if len(matches) > 1:
+                    fail(f"The Trello board {board} has duplicate managed labels named {name}")
+                context["labels"][name] = matches[0]
+            for kind in kinds:
+                name = type_label(kind)
+                matches = by_label.get(name, [])
+                context["labels"][name] = matches[0] if matches else self.call(
+                    "POST", "/labels", {"name": name, "color": TRELLO_LABEL_COLORS[kind], "idBoard": board}
+                )
+            cards = self.call("GET", f"/boards/{board}/cards?filter=all&fields=id,name,desc,url,shortUrl,closed,idLabels,idBoard")
+            for card in cards:
+                card.setdefault("idBoard", board)
+                match = marker_pattern.search(card.get("desc") or "")
+                if match:
+                    path = match.group(1)
+                    if path in self.cards:
+                        fail(f"Two Trello cards have the artifact marker for {path}")
+                    self.cards[path] = card
 
     def lookup(self, path: str) -> IssueRef | None:
         card = self.cards.get(path)
@@ -461,21 +473,31 @@ class TrelloAdapter:
         card = self.cards.get(old_path or artifact.path) or self.cards.get(artifact.path)
         created = card is None
         was_closed = bool(card and card.get("closed"))
+        board = self.board_for(artifact.kind)
+        context = self.boards[board]
+        moving = bool(card and card.get("idBoard") != board)
         payload = {"name": title, "desc": body, "closed": withdrawn}
-        if created or withdrawn or was_closed:
-            payload["idList"] = self.lists[status]
+        if created or withdrawn or was_closed or moving:
+            payload["idList"] = context["lists"][status]
+        if moving:
+            payload["idBoard"] = board
         if created:
             card = self.call("POST", "/cards", payload)
         else:
             card = self.call("PUT", f"/cards/{card['id']}", payload)
-        wanted = self.labels[type_label(artifact.kind)]["id"]
-        managed = {label["id"] for label in self.labels.values()}
+        wanted = context["labels"][type_label(artifact.kind)]["id"]
+        managed = {
+            label["id"]
+            for board_context in self.boards.values()
+            for label in board_context["labels"].values()
+        }
         current = set(card.get("idLabels", []))
         for label_id in sorted((current & managed) - {wanted}):
             self.call("DELETE", f"/cards/{card['id']}/idLabels/{label_id}")
         if wanted not in current:
             self.call("POST", f"/cards/{card['id']}/idLabels", {"value": wanted})
         card["idLabels"] = sorted((current - managed) | {wanted})
+        card["idBoard"] = board
         if old_path and old_path != artifact.path:
             self.cards.pop(old_path, None)
         self.cards[artifact.path] = card

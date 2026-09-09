@@ -67,6 +67,7 @@ let
       githubProjectNumber ? 7,
       githubSecret ? "PROJECTS_TOKEN",
       trelloBoard ? "board",
+      trelloImplementationBoard ? "",
       trelloApiKeySecret ? "TRELLO_API_KEY",
       trelloTokenSecret ? "TRELLO_TOKEN",
     }:
@@ -89,6 +90,7 @@ let
             };
             trello = {
               board-id = trelloBoard;
+              implementation-board-id = trelloImplementationBoard;
               api-key-secret = trelloApiKeySecret;
               token-secret = trelloTokenSecret;
             };
@@ -124,6 +126,12 @@ let
     ciProvider = "github-actions";
     projectProvider = "trello";
     enable = true;
+  };
+  trelloSplit = evalModule {
+    ciProvider = "github-actions";
+    projectProvider = "trello";
+    enable = true;
+    trelloImplementationBoard = "implementation-board";
   };
   adapterOnly = evalModule {
     projectProvider = "github-projects";
@@ -183,6 +191,12 @@ let
       projectProvider = "trello";
       enable = true;
       trelloTokenSecret = "invalid-secret";
+    })
+    (evalModule {
+      ciProvider = "github-actions";
+      projectProvider = "trello";
+      enable = true;
+      trelloImplementationBoard = "board";
     })
     (evalModule {
       ciProvider = "github-actions";
@@ -308,6 +322,7 @@ let
 
   githubConfig = builtins.fromJSON githubOn.files.".github/artifact-issues/config.json".text;
   trelloConfig = builtins.fromJSON trelloOn.files.".github/artifact-issues/config.json".text;
+  trelloSplitConfig = builtins.fromJSON trelloSplit.files.".github/artifact-issues/config.json".text;
   providerConfigMatches =
     githubConfig.provider == "github-projects"
     && githubConfig.githubProjects.owner == "example"
@@ -315,6 +330,8 @@ let
     && githubConfig.statuses.task == "Ready"
     && trelloConfig.provider == "trello"
     && trelloConfig.trello.boardId == "board"
+    && trelloConfig.trello.implementationBoardId == ""
+    && trelloSplitConfig.trello.implementationBoardId == "implementation-board"
     && trelloConfig.statuses.withdrawn == "Withdrawn";
   workflowsUseSelectedSecrets =
     builtins.match ".*PROJECT_TOKEN:.*PROJECTS_TOKEN.*"

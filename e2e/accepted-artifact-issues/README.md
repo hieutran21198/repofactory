@@ -37,6 +37,15 @@ Create or check only the Trello resources:
 python3 accepted-artifact-issues/e2e.py setup --provider trello
 ```
 
+Create or check separate Trello planning and implementation boards:
+
+```console
+python3 accepted-artifact-issues/e2e.py setup --provider trello --trello-layout split
+```
+
+Run setup again with `--trello-layout single` to return generated configuration to one board. The
+setup command keeps the unused board.
+
 All setup selections need `GH_TOKEN` because each provider uses a GitHub repository. Only the
 Trello selection needs the Trello credentials.
 

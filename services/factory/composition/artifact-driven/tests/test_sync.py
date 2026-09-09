@@ -275,6 +275,49 @@ class TrelloAdapterTest(unittest.TestCase):
         self.assertEqual(set(MODULE.ARTIFACT_KINDS), set(MODULE.GITHUB_LABEL_COLORS))
         self.assertEqual(set(MODULE.ARTIFACT_KINDS), set(MODULE.TRELLO_LABEL_COLORS))
 
+    def test_split_board_routes_only_plans_and_tasks(self):
+        adapter = MODULE.TrelloAdapter(
+            {"boardId": "planning", "implementationBoardId": "implementation"},
+            "owner/repo",
+            QueueApi([]),
+        )
+        self.assertEqual("implementation", adapter.board_for("task"))
+        self.assertEqual("implementation", adapter.board_for("implementation-plan"))
+        self.assertEqual("planning", adapter.board_for("requirement"))
+        self.assertEqual("planning", adapter.board_for("change-summary"))
+
+    def test_upsert_moves_existing_task_and_keeps_identity(self):
+        path = "docs/artifact/feat-login/tasks/task-api.md"
+        artifact = MODULE.classify_artifact(path)
+        moved = {
+            "id": "card",
+            "idBoard": "implementation",
+            "idLabels": ["old-task", "user-label"],
+            "url": "https://trello/card",
+            "shortUrl": "https://trello/c/card",
+            "desc": "body",
+            "closed": False,
+        }
+        api = QueueApi([moved, None, None])
+        adapter = MODULE.TrelloAdapter(
+            {"boardId": "planning", "implementationBoardId": "implementation"},
+            "owner/repo",
+            api,
+        )
+        adapter.boards = {
+            "planning": {"lists": {"Ready": "planning-ready"}, "labels": {"artifact:task": {"id": "old-task"}}},
+            "implementation": {"lists": {"Ready": "implementation-ready"}, "labels": {"artifact:task": {"id": "new-task"}}},
+        }
+        adapter.cards[path] = {**moved, "idBoard": "planning"}
+
+        ref = adapter.upsert(artifact, "Task", "body", "Ready")
+
+        self.assertEqual("card", ref.id)
+        payload = api.requests[0][2]
+        self.assertEqual("implementation", payload["idBoard"])
+        self.assertEqual("implementation-ready", payload["idList"])
+        self.assertEqual(["new-task", "user-label"], adapter.cards[path]["idLabels"])
+
 
 class FakeAdapter:
     def __init__(self):

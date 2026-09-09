@@ -194,6 +194,15 @@ class RendererTest(unittest.TestCase):
                 self.assertIn("Trello Free workspaces are supported", guide)
                 self.assertIn("Custom Fields are not required", guide)
 
+    def test_renders_optional_trello_implementation_board(self):
+        files = MODULE.render_files("trello", {
+            "trello_board": {"id": "planning"},
+            "trello_implementation_board": {"id": "implementation"},
+        })
+        config = json.loads(files[".github/artifact-issues/config.json"])
+        self.assertEqual("planning", config["trello"]["boardId"])
+        self.assertEqual("implementation", config["trello"]["implementationBoardId"])
+
 
 if __name__ == "__main__":
     unittest.main()

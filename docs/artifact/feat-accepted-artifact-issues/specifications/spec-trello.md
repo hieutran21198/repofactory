@@ -13,6 +13,9 @@ status, and card links for the logical artifact hierarchy. It supports Trello Fr
 ## Contract
 
 - Find the board by its configured ID.
+- Optionally route implementation plans and tasks to a separate implementation board.
+- Move an existing card to its configured board and preserve its identity.
+- Require only the statuses used on each configured board and the withdrawn status.
 - Require one unique list for each configured status.
 - Find managed cards by their hidden artifact marker.
 - Add exactly one managed `artifact:<kind>` label and preserve other labels.
@@ -28,4 +31,5 @@ status, and card links for the logical artifact hierarchy. It supports Trello Fr
 
 - Stop if the board or a configured list does not exist.
 - Stop if two cards contain the same artifact marker.
+- Stop if two configured board IDs are equal.
 - Stop if the Trello API rejects a card or checklist change.

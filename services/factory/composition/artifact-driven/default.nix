@@ -97,6 +97,7 @@ in
         };
         trello = {
           boardId = trello.board-id;
+          implementationBoardId = trello.implementation-board-id;
         };
       };
     in
@@ -148,6 +149,11 @@ in
               {
                 assertion = trello.board-id != "";
                 message = "${namespace}.domain.project-management.provider.trello.board-id must not be empty when project issues are enabled";
+              }
+              {
+                assertion =
+                  trello.implementation-board-id == "" || trello.implementation-board-id != trello.board-id;
+                message = "${namespace}.domain.project-management.provider.trello board IDs must be different";
               }
               {
                 assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" trello.api-key-secret != null;

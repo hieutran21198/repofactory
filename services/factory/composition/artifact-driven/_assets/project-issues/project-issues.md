@@ -64,6 +64,19 @@ and user token. Trello Free workspaces are supported. Custom Fields are not requ
 2. Make one open list for every configured artifact status.
 3. Add the API key and user token with the configured repository secret names.
 
+To use separate planning and implementation boards, set both board IDs:
+
+```nix
+factory.domain.project-management.provider.trello = {
+  board-id = "planning-board-id";
+  implementation-board-id = "implementation-board-id";
+};
+```
+
+The planning board contains summaries, requirements, specifications, and decisions. The
+implementation board contains implementation plans and tasks. Each board needs its used status
+lists and the configured withdrawn list.
+
 The workflow keeps artifact metadata in each card description. It adds child card URLs to a
 `Children` checklist on the parent card. It does not change existing Custom Fields on paid boards.
 It adds an `artifact:<kind>` label to show the artifact type.

@@ -249,17 +249,17 @@ def ensure_project() -> dict[str, Any]:
     return next(item for item in projects if item["id"] == project["id"])
 
 
-def ensure_trello_board(api: TrelloApi) -> dict[str, Any]:
+def ensure_trello_board(api: TrelloApi, name: str = RESOURCE_NAME) -> dict[str, Any]:
     boards = api.request("GET", "/members/me/boards?filter=all&fields=id,name,closed,url,prefs")
-    matches = [board for board in boards if board["name"] == RESOURCE_NAME]
+    matches = [board for board in boards if board["name"] == name]
     if len(matches) > 1:
-        raise CheckError(f"More than one Trello board is named {RESOURCE_NAME}")
+        raise CheckError(f"More than one Trello board is named {name}")
     if not matches:
         board = api.request(
             "POST",
             "/boards",
             {
-                "name": RESOURCE_NAME,
+                "name": name,
                 "defaultLists": False,
                 "prefs_permissionLevel": "private",
             },
@@ -351,6 +351,9 @@ def render_files(provider: str, state: dict[str, Any]) -> dict[str, str]:
         "--argstr",
         "trelloBoard",
         state.get("trello_board", {}).get("id", "unused"),
+        "--argstr",
+        "trelloImplementationBoard",
+        state.get("trello_implementation_board", {}).get("id", ""),
     ]
     return json.loads(run_command(args))
 
@@ -377,6 +380,7 @@ def merge_setup_state(
     repositories: dict[str, dict[str, Any]],
     project: dict[str, Any] | None = None,
     board: dict[str, Any] | None = None,
+    implementation_board: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     for provider, data in repositories.items():
         state["repositories"][provider] = {
@@ -392,10 +396,14 @@ def merge_setup_state(
         }
     if board is not None:
         state["trello_board"] = {"id": board["id"], "url": board["url"]}
+    if implementation_board is not None:
+        state["trello_implementation_board"] = {
+            "id": implementation_board["id"], "url": implementation_board["url"]
+        }
     return state
 
 
-def setup(providers: list[str]) -> dict[str, Any]:
+def setup(providers: list[str], trello_layout: str = "single") -> dict[str, Any]:
     need_environment(setup_environment(providers))
     ensure_github_account()
     state = load_setup_state()
@@ -404,11 +412,17 @@ def setup(providers: list[str]) -> dict[str, Any]:
     }
     project = None
     board = None
+    implementation_board = None
     if "github-projects" in providers:
         project = ensure_project()
     if "trello" in providers:
-        board = ensure_trello_board(TrelloApi())
-    merge_setup_state(state, repositories, project, board)
+        api = TrelloApi()
+        board = ensure_trello_board(api)
+        if trello_layout == "split":
+            implementation_board = ensure_trello_board(api, RESOURCE_NAME + " – Implementation")
+        else:
+            state.pop("trello_implementation_board", None)
+    merge_setup_state(state, repositories, project, board, implementation_board)
     for provider in providers:
         repository = repository_path(provider)
         if provider == "github-projects":
@@ -422,6 +436,8 @@ def setup(providers: list[str]) -> dict[str, Any]:
         log(f"GitHub Project: {state['github_project']['url']}")
     if "trello" in providers:
         log(f"Trello board: {state['trello_board']['url']}")
+        if "trello_implementation_board" in state:
+            log(f"Trello implementation board: {state['trello_implementation_board']['url']}")
     return state
 
 
@@ -730,34 +746,46 @@ class TrelloInspector:
     def __init__(self, repository: str, state: dict[str, Any], api: TrelloApi):
         self.repository = repository
         self.board = state["trello_board"]["id"]
+        self.implementation_board = state.get("trello_implementation_board", {}).get("id", "")
+        self.boards = [self.board] + ([self.implementation_board] if self.implementation_board else [])
         self.api = api
 
-    def lists(self) -> dict[str, str]:
-        lists = self.api.request("GET", f"/boards/{self.board}/lists?filter=all")
-        return {item["name"]: item["id"] for item in lists if not item["closed"]}
+    def lists(self) -> dict[str, dict[str, str]]:
+        return {
+            board: {
+                item["name"]: item["id"]
+                for item in self.api.request("GET", f"/boards/{board}/lists?filter=all")
+                if not item["closed"]
+            }
+            for board in self.boards
+        }
 
     def labels(self) -> dict[str, str]:
-        labels = self.api.request("GET", f"/boards/{self.board}/labels?limit=1000")
-        return {item["id"]: item["name"] for item in labels}
+        result = {}
+        for board in self.boards:
+            labels = self.api.request("GET", f"/boards/{board}/labels?limit=1000")
+            result.update({item["id"]: item["name"] for item in labels})
+        return result
 
     def cards(self) -> dict[str, dict[str, Any]]:
-        cards = self.api.request(
-            "GET",
-            f"/boards/{self.board}/cards"
-            "?filter=all&fields=id,name,desc,url,shortUrl,closed,idList,idLabels",
-        )
         result: dict[str, dict[str, Any]] = {}
-        for card in cards:
-            path = marker_path(self.repository, card.get("desc") or "")
-            if path:
-                if path in result:
-                    raise CheckError(f"Two Trello cards use the marker for {path}")
-                result[path] = card
+        for board in self.boards:
+            cards = self.api.request(
+                "GET", f"/boards/{board}/cards"
+                "?filter=all&fields=id,name,desc,url,shortUrl,closed,idList,idLabels,idBoard",
+            )
+            for card in cards:
+                card.setdefault("idBoard", board)
+                path = marker_path(self.repository, card.get("desc") or "")
+                if path:
+                    if path in result:
+                        raise CheckError(f"Two Trello cards use the marker for {path}")
+                    result[path] = card
         return result
 
     def set_status(self, path: str, status: str) -> None:
         card = self.cards()[path]
-        self.api.request("PUT", f"/cards/{card['id']}", {"idList": self.lists()[status]})
+        self.api.request("PUT", f"/cards/{card['id']}", {"idList": self.lists()[card["idBoard"]][status]})
 
     def assert_items(
         self,
@@ -778,10 +806,17 @@ class TrelloInspector:
             result[path] = card["id"]
             if identities and path in identities and card["id"] != identities[path]:
                 raise CheckError(f"Trello changed the card identity for {path}")
-            if card["idList"] != lists[status]:
+            kind, parent = artifact_metadata(path)
+            expected_board = (
+                self.implementation_board
+                if self.implementation_board and kind in {"implementation-plan", "task"}
+                else self.board
+            )
+            if card["idBoard"] != expected_board:
+                raise CheckError(f"Trello card {path} is on the wrong board")
+            if card["idList"] != lists[expected_board][status]:
                 raise CheckError(f"Trello card {path} does not have status {status}")
             description = card.get("desc") or ""
-            kind, parent = artifact_metadata(path)
             managed = [
                 labels[label_id]
                 for label_id in card.get("idLabels", [])
@@ -825,7 +860,7 @@ class TrelloInspector:
                 self.api.request(
                     "PUT",
                     f"/cards/{card['id']}",
-                    {"idList": lists["Withdrawn"], "closed": True},
+                    {"idList": lists[card["idBoard"]]["Withdrawn"], "closed": True},
                 )
 
 
@@ -1165,6 +1200,9 @@ def parse_args() -> argparse.Namespace:
         "setup", help="Create or check the live test resources"
     )
     add_provider_argument(setup_parser)
+    setup_parser.add_argument(
+        "--trello-layout", choices=("single", "split"), default="single"
+    )
     for command in ("test", "cleanup"):
         child = subparsers.add_parser(command, help=f"{command.title()} the live test resources")
         add_provider_argument(child)
@@ -1204,7 +1242,7 @@ def main() -> int:
     try:
         providers = selected_providers(args.provider)
         if args.command == "setup":
-            setup(providers)
+            setup(providers, args.trello_layout)
             return 0
         need_environment(["GH_TOKEN"])
         state = load_state()

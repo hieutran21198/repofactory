@@ -3,6 +3,7 @@
   owner ? "hieutran21198",
   projectNumber ? 1,
   trelloBoard ? "unused",
+  trelloImplementationBoard ? "",
 }:
 let
   optionUtils = {
@@ -80,6 +81,7 @@ let
           };
           trello = {
             board-id = trelloBoard;
+            implementation-board-id = trelloImplementationBoard;
             api-key-secret = "TRELLO_API_KEY";
             token-secret = "TRELLO_TOKEN";
           };

@@ -18,3 +18,4 @@ issues show the artifact hierarchy and link to the accepted repository content.
 - [Support Trello Free workspaces](changes/change-trello-free-workspaces/README.md)
 - [Run all selected provider checks](changes/change-run-all-provider-checks/README.md)
 - [Show artifact types with labels](changes/change-artifact-type-labels/README.md)
+- [Split Trello planning and implementation boards](changes/change-split-trello-boards/README.md)
