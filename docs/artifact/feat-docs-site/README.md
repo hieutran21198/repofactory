@@ -10,4 +10,5 @@ project that enables the feature configures only a title, a site URL, and a base
 
 - [Requirements](requirements/README.md)
 - [Specifications](specifications/README.md)
+- [Decisions](decisions/)
 - [Implementation plan](tasks/README.md)
