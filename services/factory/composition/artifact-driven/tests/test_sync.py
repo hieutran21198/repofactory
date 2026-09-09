@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -325,6 +326,9 @@ class FakeAdapter:
         self.links = []
         self.existing = {}
 
+    def preflight(self, statuses):
+        return None
+
     def lookup(self, path):
         return self.existing.get(path)
 
@@ -339,6 +343,7 @@ class FakeAdapter:
 class SynchronizerTest(unittest.TestCase):
     def setUp(self):
         self.old_repository = os.environ.get("GITHUB_REPOSITORY")
+        self.old_result = os.environ.get("ARTIFACT_ISSUES_RESULT")
         os.environ["GITHUB_REPOSITORY"] = "owner/repo"
         self.statuses = {
             "feature-summary": "Accepted",
@@ -358,6 +363,10 @@ class SynchronizerTest(unittest.TestCase):
             os.environ.pop("GITHUB_REPOSITORY", None)
         else:
             os.environ["GITHUB_REPOSITORY"] = self.old_repository
+        if self.old_result is None:
+            os.environ.pop("ARTIFACT_ISSUES_RESULT", None)
+        else:
+            os.environ["ARTIFACT_ISSUES_RESULT"] = self.old_result
 
     def test_sync_builds_parent_chain_before_leaf(self):
         adapter = FakeAdapter()
@@ -422,6 +431,71 @@ class SynchronizerTest(unittest.TestCase):
         leaf = "docs/artifact/feat-accepted-artifact-issues/requirements/req-accepted-only.md"
         sync.sync_path(leaf)
         self.assertEqual([leaf], [item[0] for item in adapter.upserts])
+
+    def test_run_writes_changed_artifacts_without_implicit_parents(self):
+        class TestSynchronizer(MODULE.Synchronizer):
+            def changed_files(self):
+                return [
+                    {"filename": "docs/artifact/feat-added/README.md", "status": "added"},
+                    {"filename": "docs/artifact/feat-updated/requirements/README.md", "status": "modified"},
+                    {
+                        "filename": "docs/artifact/feat-renamed/tasks/README.md",
+                        "previous_filename": "docs/artifact/feat-old/tasks/README.md",
+                        "status": "renamed",
+                    },
+                    {"filename": "docs/artifact/feat-removed/tasks/task-old.md", "status": "removed"},
+                ]
+
+            def comment_on_pull_request(self):
+                return None
+
+        event = {
+            "repository": {"default_branch": "main"},
+            "pull_request": {
+                "number": 21,
+                "title": "Accept artifacts",
+                "html_url": "https://github.example/pull/21",
+                "merge_commit_sha": "abc123",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result.json"
+            os.environ["ARTIFACT_ISSUES_RESULT"] = str(output)
+            sync = TestSynchronizer(
+                {"provider": "fake", "statuses": self.statuses}, event, adapter=FakeAdapter()
+            )
+
+            sync.run()
+
+            result = MODULE.json.loads(output.read_text())
+        self.assertEqual("owner/repo", result["repository"])
+        self.assertEqual(21, result["pullRequest"]["number"])
+        self.assertEqual(
+            ["added", "withdrawn", "renamed", "updated"],
+            [item["change"] for item in result["artifacts"]],
+        )
+        self.assertEqual(4, len(result["artifacts"]))
+        renamed = next(item for item in result["artifacts"] if item["change"] == "renamed")
+        self.assertEqual("docs/artifact/feat-old/tasks/README.md", renamed["previousPath"])
+
+    def test_run_writes_empty_result_without_provider_preflight(self):
+        class TestSynchronizer(MODULE.Synchronizer):
+            def changed_files(self):
+                return [{"filename": "README.md", "status": "modified"}]
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result.json"
+            os.environ["ARTIFACT_ISSUES_RESULT"] = str(output)
+            sync = TestSynchronizer(
+                {"provider": "fake", "statuses": self.statuses},
+                {"repository": {"default_branch": "main"}},
+                adapter=FakeAdapter(),
+            )
+
+            sync.run()
+
+            result = MODULE.json.loads(output.read_text())
+        self.assertEqual([], result["artifacts"])
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ secret names, replace the default names too.
 | `GITHUB_TOKEN` | GitHub Actions | GitHub supplies this token for repository issues and comments. Do not add this secret. |
 | `GH_TOKEN` | Local shell | GitHub CLI uses this temporary variable during setup. |
 | `PROJECTS_TOKEN` | Repository secret | The workflow uses this secret for GitHub Projects. |
+| `ARTIFACT_NOTIFICATION_WEBHOOK` | Repository secret | The workflow sends accepted artifact summaries to this webhook. |
 
 The workflow exposes `PROJECTS_TOKEN` as `PROJECT_TOKEN` to the synchronizer. If you changed
 `token-secret` in the factory configuration, use that configured repository secret name.
@@ -117,6 +118,65 @@ gh secret list --repo OWNER/REPOSITORY
 unset TRELLO_API_KEY TRELLO_TOKEN
 ```
 
+## Set up an acceptance notification
+
+Select one notification provider in the Factory configuration:
+
+```nix
+factory.composition.artifact-driven.project-issues.notification = {
+  provider = "google-chat"; # Or "slack".
+  webhook-secret = "ARTIFACT_NOTIFICATION_WEBHOOK";
+};
+```
+
+### Make a Google Chat webhook
+
+1. Open the Google Chat space that must receive the messages.
+2. Open **Apps and integrations** from the space menu.
+3. Add a webhook and give it a descriptive name.
+4. Copy the webhook URL.
+
+For detailed instructions, refer to the
+[Google Chat incoming webhook guide](https://developers.google.com/workspace/chat/quickstart/webhooks).
+Your Google Workspace administrator must permit incoming webhooks.
+
+### Make a Slack webhook
+
+1. Make or open a Slack app for the workspace.
+2. Activate **Incoming Webhooks**.
+3. Select **Add New Webhook to Workspace**.
+4. Select the channel that must receive the messages.
+5. Copy the webhook URL.
+
+For detailed instructions, refer to the
+[Slack incoming webhook guide](https://api.slack.com/messaging/webhooks).
+
+### Store the webhook
+
+Treat the webhook URL as a password. Read it with a silent prompt:
+
+```bash
+read -rsp "Notification webhook: " ARTIFACT_NOTIFICATION_WEBHOOK
+printf '\n'
+```
+
+Add the value to the configured repository secret:
+
+```bash
+printf '%s' "$ARTIFACT_NOTIFICATION_WEBHOOK" \
+  | gh secret set ARTIFACT_NOTIFICATION_WEBHOOK --repo OWNER/REPOSITORY
+```
+
+Check the secret name, and then remove the local variable:
+
+```bash
+gh secret list --repo OWNER/REPOSITORY
+unset ARTIFACT_NOTIFICATION_WEBHOOK
+```
+
+The next merged pull request with a supported artifact change tests delivery. A manual workflow
+run synchronizes artifacts but does not send a notification.
+
 ## Check the workflow
 
 Run the manual full scan after you configure the provider target and its repository secrets.
@@ -155,3 +215,5 @@ Then replace the repository secret if the integration must continue.
 - [GitHub: Automating Projects with Actions](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/automating-projects-using-actions)
 - [GitHub CLI: `gh auth login`](https://cli.github.com/manual/gh_auth_login)
 - [Trello: Authorization](https://developer.atlassian.com/cloud/trello/guides/rest-api/authorization/)
+- [Google Chat: Send messages with incoming webhooks](https://developers.google.com/workspace/chat/quickstart/webhooks)
+- [Slack: Sending messages using incoming webhooks](https://api.slack.com/messaging/webhooks)

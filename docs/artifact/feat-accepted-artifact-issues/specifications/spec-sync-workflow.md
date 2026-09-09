@@ -32,6 +32,10 @@ For each changed artifact:
 The manual action creates or updates every current artifact. It does not withdraw an issue because
 the scan has no accepted deletion event.
 
+When acceptance notification is enabled, the synchronizer writes a result for the changed artifact
+files. A following step sends one summary for an automatic merged pull request. It sends no summary
+for a manual scan or an empty result.
+
 ## Errors
 
 - Stop before a write if the provider schema or credentials are not correct.

@@ -10,6 +10,8 @@ let
   workflow =
     provider: tokenSecret:
     let
+      notification = config.${namespace}.composition.artifact-driven.project-issues.notification;
+      notificationEnabled = notification.provider != "unset";
       providerSecrets =
         if provider == "github-projects" then
           "PROJECT_TOKEN: \${{ secrets.${tokenSecret} }}"
@@ -18,6 +20,8 @@ let
             trello = config.${namespace}.domain.project-management.provider.trello;
           in
           "TRELLO_API_KEY: \${{ secrets.${trello.api-key-secret} }}\n          TRELLO_TOKEN: \${{ secrets.${trello.token-secret} }}";
+      resultEnvironment = lib.optionalString notificationEnabled "\n                ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json";
+      notificationStep = lib.optionalString notificationEnabled "\n            - name: Notify the team about accepted artifacts\n              if: github.event_name == 'pull_request_target'\n              run: python3 .github/artifact-issues/notify.py\n              env:\n                ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json\n                ARTIFACT_NOTIFICATION_PROVIDER: ${notification.provider}\n                ARTIFACT_NOTIFICATION_WEBHOOK: \${{ secrets.${notification.webhook-secret} }}";
     in
     ''
       name: Accepted artifact issues
@@ -50,7 +54,8 @@ let
               run: python3 .github/artifact-issues/sync.py
               env:
                 GITHUB_TOKEN: ''${{ github.token }}
-                ${providerSecrets}
+                ${providerSecrets}${resultEnvironment}
+      ${notificationStep}
     '';
 in
 {
@@ -71,6 +76,21 @@ in
       change-summary = _utils.mkStrOpt { default = "Accepted"; };
       withdrawn = _utils.mkStrOpt { default = "Withdrawn"; };
     };
+    notification = {
+      provider = _utils.mkEnumOpt {
+        values = [
+          "unset"
+          "google-chat"
+          "slack"
+        ];
+        default = "unset";
+        description = "The team webhook provider for accepted artifact summaries";
+      };
+      webhook-secret = _utils.mkStrOpt {
+        default = "ARTIFACT_NOTIFICATION_WEBHOOK";
+        description = "The GitHub Actions secret that contains the team webhook URL";
+      };
+    };
   };
 
   config =
@@ -86,6 +106,7 @@ in
       projectProvider = project-management.provider.use;
       projectIssues = config.${namespace}.composition.artifact-driven.project-issues;
       artifactIssues = projectIssues.enable;
+      notificationEnabled = projectIssues.notification.provider != "unset";
       githubProjects = project-management.provider.github-projects;
       trello = project-management.provider.trello;
       projectConfig = {
@@ -124,6 +145,11 @@ in
           assertion = projectIssues.artifact-status.${name} != "";
           message = "${namespace}.composition.artifact-driven.project-issues.artifact-status.${name} must not be empty";
         }) (builtins.attrNames projectIssues.artifact-status)
+        ++ lib.optional notificationEnabled {
+          assertion =
+            builtins.match "[A-Za-z_][A-Za-z0-9_]*" projectIssues.notification.webhook-secret != null;
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.webhook-secret must be a GitHub secret name";
+        }
         ++ (
           if projectProvider == "github-projects" then
             [
@@ -268,6 +294,12 @@ in
           };
           "docs/wiki/documentation/artifact-driven/project-issue-credentials.md" = {
             source = ./_assets/project-issues/project-issue-credentials.md;
+            copyMode = "copy";
+          };
+        }
+        // lib.optionalAttrs notificationEnabled {
+          ".github/artifact-issues/notify.py" = {
+            source = ./_assets/project-issues/notify.py;
             copyMode = "copy";
           };
         };

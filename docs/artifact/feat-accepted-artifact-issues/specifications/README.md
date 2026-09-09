@@ -4,7 +4,8 @@
 
 The factory generates a trusted GitHub Actions workflow for the selected project provider. The
 workflow synchronizes each accepted feature artifact to one provider issue after a pull request
-merges. It also supports a manual full scan.
+merges. It also supports a manual full scan. An optional webhook step sends one accepted change
+summary to Google Chat or Slack after synchronization succeeds.
 
 ## Teardown specifications
 
@@ -22,3 +23,4 @@ merges. It also supports a manual full scan.
 - [Keep provider links out of artifacts](../decisions/adr-provider-links.md)
 - [Use provider-native issue forms](../decisions/adr-provider-hierarchy.md)
 - [Use a domain model for repository blueprints](../decisions/adr-blueprint-pattern.md)
+- [Use repository-owned incoming webhook delivery](../changes/change-accepted-artifact-notifications/decisions/adr-incoming-webhook-delivery.md)

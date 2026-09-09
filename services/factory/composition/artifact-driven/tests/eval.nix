@@ -19,6 +19,7 @@ let
     mkIf = condition: value: if condition then value else { };
     mkForce = value: value;
     optionalString = condition: string: if condition then string else "";
+    optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
     foldl' = builtins.foldl';
     nameValuePair = name: value: { inherit name value; };
@@ -70,6 +71,8 @@ let
       trelloImplementationBoard ? "",
       trelloApiKeySecret ? "TRELLO_API_KEY",
       trelloTokenSecret ? "TRELLO_TOKEN",
+      notificationProvider ? "unset",
+      notificationSecret ? "ARTIFACT_NOTIFICATION_WEBHOOK",
     }:
     import ../default.nix {
       inherit lib;
@@ -99,6 +102,10 @@ let
         composition.artifact-driven.project-issues = {
           inherit enable;
           artifact-status = statuses;
+          notification = {
+            provider = notificationProvider;
+            webhook-secret = notificationSecret;
+          };
         };
       };
       namespace = "factory";
@@ -132,6 +139,19 @@ let
     projectProvider = "trello";
     enable = true;
     trelloImplementationBoard = "implementation-board";
+  };
+  googleChatOn = evalModule {
+    ciProvider = "github-actions";
+    projectProvider = "github-projects";
+    enable = true;
+    notificationProvider = "google-chat";
+  };
+  slackOn = evalModule {
+    ciProvider = "github-actions";
+    projectProvider = "trello";
+    enable = true;
+    notificationProvider = "slack";
+    notificationSecret = "TEAM_WEBHOOK";
   };
   adapterOnly = evalModule {
     projectProvider = "github-projects";
@@ -205,6 +225,13 @@ let
       statuses = defaultStatuses // {
         task = "";
       };
+    })
+    (evalModule {
+      ciProvider = "github-actions";
+      projectProvider = "github-projects";
+      enable = true;
+      notificationProvider = "slack";
+      notificationSecret = "invalid-secret";
     })
   ];
 
@@ -350,6 +377,27 @@ let
         githubOn
         trelloOn
       ];
+  notificationFile = ".github/artifact-issues/notify.py";
+  notificationFilesMatch =
+    !(builtins.hasAttr notificationFile githubOn.files)
+    && builtins.hasAttr notificationFile googleChatOn.files
+    && googleChatOn.files.${notificationFile}.source == ../_assets/project-issues/notify.py
+    && builtins.hasAttr notificationFile slackOn.files;
+  googleChatWorkflow = googleChatOn.files.".github/workflows/accepted-artifact-issues.yml".text;
+  slackWorkflow = slackOn.files.".github/workflows/accepted-artifact-issues.yml".text;
+  notificationWorkflowsMatch =
+    builtins.match ".*ARTIFACT_ISSUES_RESULT:.*runner.temp.*/accepted-artifacts.json.*" googleChatWorkflow
+    != null
+    && builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER: google-chat.*" googleChatWorkflow != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_WEBHOOK:.*ARTIFACT_NOTIFICATION_WEBHOOK.*" googleChatWorkflow
+      != null
+    && builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER: slack.*" slackWorkflow != null
+    && builtins.match ".*ARTIFACT_NOTIFICATION_WEBHOOK:.*TEAM_WEBHOOK.*" slackWorkflow != null
+    && builtins.match ".*if: github.event_name == 'pull_request_target'.*" slackWorkflow != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER.*"
+        githubOn.files.".github/workflows/accepted-artifact-issues.yml".text == null;
   credentialGuide =
     githubOn.files."docs/wiki/documentation/artifact-driven/project-issue-credentials.md";
   credentialGuideMatches =
@@ -360,6 +408,14 @@ let
       builtins.match ".*`repo` and `project` scopes.*" (builtins.readFile credentialGuide.source) != null
     &&
       builtins.match ".*`read` and `write` scopes.*" (builtins.readFile credentialGuide.source) != null;
+  notificationGuidesMatch =
+    builtins.match ".*notification.provider.*google-chat.*slack.*" (
+      builtins.readFile githubOn.files."docs/wiki/documentation/artifact-driven/project-issues.md".source
+    ) != null
+    &&
+      builtins.match ".*Google Chat incoming webhook guide.*Slack incoming webhook guide.*" (
+        builtins.readFile credentialGuide.source
+      ) != null;
 
   skillPath = ../_assets/agent/skill/by-role/solution-expert/expert-role;
   skillFiles = [
@@ -401,7 +457,13 @@ let
     compositionModule.options.factory.composition.artifact-driven.project-issues.enable.default == false
     &&
       compositionModule.options.factory.composition.artifact-driven.project-issues.artifact-status.task.default
-      == "Ready";
+      == "Ready"
+    &&
+      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.provider.default
+      == "unset"
+    &&
+      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.webhook-secret.default
+      == "ARTIFACT_NOTIFICATION_WEBHOOK";
   providerDoesNotOwnPolicy =
     !(builtins.hasAttr "artifact-status" providerModule.options.factory.domain.project-management);
 in
@@ -420,7 +482,10 @@ assert invalidSetupsRejected;
 assert providerConfigMatches;
 assert workflowsUseSelectedSecrets;
 assert workflowsCanWritePullRequestComments;
+assert notificationFilesMatch;
+assert notificationWorkflowsMatch;
 assert credentialGuideMatches;
+assert notificationGuidesMatch;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
 assert skillShipped;
@@ -446,7 +511,10 @@ assert solutionExpertNamesSkill;
     providerConfigMatches
     workflowsUseSelectedSecrets
     workflowsCanWritePullRequestComments
+    notificationFilesMatch
+    notificationWorkflowsMatch
     credentialGuideMatches
+    notificationGuidesMatch
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
     skillShipped
