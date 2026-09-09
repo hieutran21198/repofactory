@@ -102,6 +102,9 @@ the same three values. The file has no other key.
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "overrides": {
+    "webpackbar": "^7.0.0"
   }
 }
 ```
@@ -115,10 +118,14 @@ the same three values. The file has no other key.
 | `dependencies."@mdx-js/react"` | Major version 3. |
 | `dependencies."prism-react-renderer"` | Major version 2. |
 | `dependencies.react`, `dependencies."react-dom"` | Major version 19. |
+| `overrides.webpackbar` | `^7.0.0`. The lockfile resolves webpack 5.110, which validates the options of `ProgressPlugin` in `apply()` since 5.106.0. `webpackbar` 6.0.1, which `@docusaurus/bundler` 3.9.2 requires, overwrites these options, and `npm run build` fails with a `ValidationError`. `webpackbar` 7.0.0 keeps its options separate. |
 | `type` | Absent. The config file is CommonJS. |
 
 `<patch>` is the latest 3.9 patch release at the time of the implementation. The factory pins the
 version. A project does not edit the file.
+
+The factory removes the `overrides` field when the pin moves to a Docusaurus version that
+requires `webpackbar ^7`. The factory then runs the lockfile command again.
 
 ### `package-lock.json`
 
@@ -192,7 +199,7 @@ The wiki page tells a project how to use the site. It has these sections, in thi
 | --- | --- |
 | `## Run locally` | Node.js 22 is not in the shell. Use `languages.javascript = { enable = true; npm.enable = true; }` in `devenv.local.nix`, or `nix shell nixpkgs#nodejs_22`. Then `cd apps/documentation`, `npm ci`, `npm run start`. |
 | `## Publish` | The workflow `.github/workflows/docs-site.yml` builds and publishes on each push to the default branch. One manual step: set the Pages source to "GitHub Actions" in the repository settings. |
-| `## Write pages that render` | `.md` files render as CommonMark. Put a `<name>` placeholder in backticks or in a code block. Link a `README.md` file, not a folder. The templates under `docs/wiki/**/templates/` do not render. |
+| `## Write pages that render` | `.md` files render as CommonMark. Put a `<name>` placeholder in backticks or in a code block. Link a `README.md` file, not a folder. A link to a URL path of a folder must end with `/`, for example `](decisions/)`. The templates under `docs/wiki/**/templates/` do not render. |
 
 The page contains the strings `npm run start` and `GitHub Actions`.
 

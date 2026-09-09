@@ -47,3 +47,9 @@ confirm that the lockfile agrees with `package.json`. The task `task-verify-gene
 `npm ci` to confirm that. A project cannot add a dependency to the site, because the next shell
 entry overwrites `package.json`. This follows the requirement: a project configures only a
 title, a site URL, and a base URL.
+
+The pinned tree needs one `overrides` field in `package.json`: `webpackbar` at `^7.0.0`. The
+lockfile resolves webpack 5.110, which rejects the `ProgressPlugin` options that `webpackbar` 6
+writes, and `npm run build` fails without the override. The factory maintainer removes the
+override when the pin moves to a Docusaurus version that requires `webpackbar ^7`, and runs the
+lockfile command again.
