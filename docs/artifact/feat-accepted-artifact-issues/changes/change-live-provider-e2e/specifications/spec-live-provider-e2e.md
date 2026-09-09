@@ -41,8 +41,8 @@ The GitHub account is `hieutran21198`. The component uses these persistent resou
 
 - `repofactory-e2e-github-projects`, a private GitHub repository.
 - `repofactory-e2e-trello`, a private GitHub repository.
-- `Repofactory E2E - Accepted Artifacts`, a private personal GitHub Project.
-- `Repofactory E2E - Accepted Artifacts`, a private Trello board.
+- `Repofactory E2E – Accepted Artifacts`, a private personal GitHub Project.
+- `Repofactory E2E – Accepted Artifacts`, a private Trello board.
 
 The GitHub Project has one single-select field named `Status`. The field has the options
 `Accepted`, `Ready`, and `Withdrawn`.
@@ -74,4 +74,3 @@ resource URLs and the failed step. It does not delete the provider resources aft
 
 The command waits a maximum of ten minutes for one workflow. It increases the delay between API
 requests during the wait.
-
