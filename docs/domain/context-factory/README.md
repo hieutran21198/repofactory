@@ -23,6 +23,7 @@ working rules the factory supplies to a generated repository.
 | Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
 | Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
 | Documentation site | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. |
+| Deployment notification | One team message that reports a successful documentation site deployment. |
 
 ## Business rules
 
@@ -32,6 +33,7 @@ working rules the factory supplies to a generated repository.
 - A child artifact issue points to its parent artifact issue.
 - Provider identifiers do not occur in artifact files.
 - An acceptance notification follows successful artifact issue synchronization.
+- A deployment notification follows a successful documentation site deployment.
 
 ## Inbound messages
 
@@ -47,6 +49,7 @@ working rules the factory supplies to a generated repository.
 | Repository blueprint composed | event | Repository maintainer |
 | Artifact issue synchronized | event | Repository maintainer |
 | Acceptance notification sent | event | Repository maintainer |
+| Deployment notification sent | event | Repository maintainer |
 
 ## Aggregates
 

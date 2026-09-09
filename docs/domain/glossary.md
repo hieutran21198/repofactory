@@ -16,3 +16,4 @@ write two rows.
 | Role | context-factory | An agent persona with one body and one declaration, rendered as one role file for each harness in use. | Skill |
 | Skill | context-factory | A folder of instructions that a harness loads on request, copied to the skill folder of each harness in use. | Role |
 | Documentation site | context-factory | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. | Wiki |
+| Deployment notification | context-factory | One team message that reports a successful documentation site deployment. | Acceptance notification |
