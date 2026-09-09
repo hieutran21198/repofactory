@@ -43,6 +43,9 @@ Trello selection needs the Trello credentials.
 The Trello check supports Trello Free workspaces. It uses lists, descriptions, cards, and
 checklists. It does not require or change Custom Fields.
 
+Both providers use managed `artifact:<kind>` labels to show artifact types. The check preserves
+labels that do not start with `artifact:`.
+
 Run the two provider checks:
 
 ```console

@@ -52,7 +52,8 @@ Use the [provider credential guide](project-issue-credentials.md) to create and 
 3. Add every configured artifact status to the field.
 4. Add the token with the configured repository secret name.
 
-The workflow makes repository issues. It connects child issues with the GitHub sub-issues API.
+The workflow makes repository issues. It adds an `artifact:<kind>` label to show the artifact type.
+It connects child issues with the GitHub sub-issues API.
 
 ## Trello setup
 
@@ -65,6 +66,10 @@ and user token. Trello Free workspaces are supported. Custom Fields are not requ
 
 The workflow keeps artifact metadata in each card description. It adds child card URLs to a
 `Children` checklist on the parent card. It does not change existing Custom Fields on paid boards.
+It adds an `artifact:<kind>` label to show the artifact type.
+
+Repofactory creates missing artifact type labels. It preserves labels that do not start with
+`artifact:`.
 
 ## Links
 

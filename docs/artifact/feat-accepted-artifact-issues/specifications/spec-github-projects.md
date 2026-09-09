@@ -18,9 +18,11 @@ one GitHub Project. The project `Status` field supplies the configured artifact 
 - Find the project by owner type, owner name, and project number.
 - Require one single-select field named `Status`.
 - Find managed issues by their hidden artifact marker.
+- Add exactly one managed `artifact:<kind>` label and preserve other labels.
 - Create parent issues before child issues.
 - Add child issues through the GitHub sub-issues API.
 - Close a withdrawn artifact issue after its project status changes.
+- Create missing managed labels in the repository.
 
 ## Errors
 

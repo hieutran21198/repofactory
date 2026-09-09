@@ -69,8 +69,8 @@ The component uses one unique feature name for each check. It checks these event
 8. Delete one artifact.
 9. Delete the remaining artifact tree.
 
-The component checks provider identity, status, hierarchy, links, and the managed pull request
-comment. A second run must not make a duplicate provider item or a duplicate managed comment.
+The component checks provider identity, status, artifact type labels, hierarchy, links, and the
+managed pull request comment. A second run must not make duplicate provider data.
 
 ## Failures
 

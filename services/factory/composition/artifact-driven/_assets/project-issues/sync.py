@@ -15,6 +15,32 @@ from typing import Any
 
 ARTIFACT_ROOT = Path("docs/artifact")
 MANAGED_COMMENT = "<!-- repofactory:accepted-artifact-issues -->"
+LABEL_PREFIX = "artifact:"
+ARTIFACT_KINDS = (
+    "feature-summary", "master-requirement", "requirement", "master-specification",
+    "specification", "decision", "implementation-plan", "task", "change-summary",
+)
+GITHUB_LABEL_COLORS = {
+    kind: color for kind, color in zip(ARTIFACT_KINDS, (
+        "1f6feb", "8250df", "a371f7", "bf8700", "d4a72c",
+        "cf222e", "1a7f37", "0969da", "57606a",
+    ))
+}
+TRELLO_LABEL_COLORS = {
+    kind: color for kind, color in zip(ARTIFACT_KINDS, (
+        "blue", "purple", "orange", "yellow", "red",
+        "green", "sky", "pink", "lime",
+    ))
+}
+
+
+def type_label(kind: str) -> str:
+    return LABEL_PREFIX + kind
+
+
+def issue_label_names(issue: dict[str, Any], kind: str) -> list[str]:
+    existing = [label["name"] if isinstance(label, dict) else label for label in issue.get("labels", [])]
+    return [name for name in existing if not name.startswith(LABEL_PREFIX)] + [type_label(kind)]
 
 
 @dataclass(frozen=True)
@@ -197,6 +223,7 @@ class GitHubAdapter:
         self.project_id = ""
         self.status_field_id = ""
         self.status_options: dict[str, str] = {}
+        self.labels: set[str] = set()
 
     def rest(self, method: str, path: str, data: dict[str, Any] | None = None) -> Any:
         return self.api.request(
@@ -245,6 +272,20 @@ class GitHubAdapter:
         missing = sorted(set(statuses.values()) - set(self.status_options))
         if missing:
             fail("The GitHub Project is missing Status options: " + ", ".join(missing))
+        page = 1
+        while True:
+            batch = self.rest("GET", f"/repos/{self.repository}/labels?per_page=100&page={page}")
+            self.labels.update(label["name"] for label in batch)
+            if len(batch) < 100:
+                break
+            page += 1
+        for kind, color in GITHUB_LABEL_COLORS.items():
+            name = type_label(kind)
+            if name not in self.labels:
+                self.rest("POST", f"/repos/{self.repository}/labels", {
+                    "name": name, "color": color, "description": f"Repofactory artifact type: {kind}",
+                })
+                self.labels.add(name)
         page = 1
         marker_pattern = re.compile(r"<!-- repofactory:artifact:[^:]+/[^:]+:(.+) -->")
         while True:
@@ -309,15 +350,16 @@ class GitHubAdapter:
         created = issue is None
         was_closed = bool(issue and issue.get("state") == "closed")
         state = "closed" if withdrawn else "open"
+        labels = issue_label_names(issue or {}, artifact.kind)
         if created:
             issue = self.rest(
-                "POST", f"/repos/{self.repository}/issues", {"title": title, "body": body}
+                "POST", f"/repos/{self.repository}/issues", {"title": title, "body": body, "labels": labels}
             )
         else:
             issue = self.rest(
                 "PATCH",
                 f"/repos/{self.repository}/issues/{issue['number']}",
-                {"title": title, "body": body, "state": state},
+                {"title": title, "body": body, "state": state, "labels": labels},
             )
         if old_path and old_path != artifact.path:
             self.issues.pop(old_path, None)
@@ -349,6 +391,7 @@ class TrelloAdapter:
         self.base = "https://api.trello.com/1"
         self.lists: dict[str, str] = {}
         self.cards: dict[str, dict[str, Any]] = {}
+        self.labels: dict[str, dict[str, Any]] = {}
 
     def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> Any:
         separator = "&" if "?" in path else "?"
@@ -373,9 +416,25 @@ class TrelloAdapter:
                 self.lists[status] = matches[0]
         if missing:
             fail("The Trello board needs one open list for each status: " + ", ".join(sorted(missing)))
+        board_labels = self.call("GET", f"/boards/{board}/labels?limit=1000&fields=id,name,color")
+        by_label: dict[str, list[dict[str, Any]]] = {}
+        for label in board_labels:
+            if label.get("name", "").startswith(LABEL_PREFIX):
+                by_label.setdefault(label["name"], []).append(label)
+        for kind, color in TRELLO_LABEL_COLORS.items():
+            name = type_label(kind)
+            matches = by_label.get(name, [])
+            if len(matches) > 1:
+                fail(f"The Trello board has duplicate managed labels named {name}")
+            if matches:
+                self.labels[name] = matches[0]
+            else:
+                self.labels[name] = self.call("POST", "/labels", {
+                    "name": name, "color": color, "idBoard": board,
+                })
         marker_prefix = re.escape(f"<!-- repofactory:artifact:{self.repository}:")
         marker_pattern = re.compile(marker_prefix + r"(.+) -->")
-        cards = self.call("GET", f"/boards/{board}/cards?filter=all&fields=id,name,desc,url,shortUrl,closed")
+        cards = self.call("GET", f"/boards/{board}/cards?filter=all&fields=id,name,desc,url,shortUrl,closed,idLabels")
         for card in cards:
             match = marker_pattern.search(card.get("desc") or "")
             if match:
@@ -409,6 +468,14 @@ class TrelloAdapter:
             card = self.call("POST", "/cards", payload)
         else:
             card = self.call("PUT", f"/cards/{card['id']}", payload)
+        wanted = self.labels[type_label(artifact.kind)]["id"]
+        managed = {label["id"] for label in self.labels.values()}
+        current = set(card.get("idLabels", []))
+        for label_id in sorted((current & managed) - {wanted}):
+            self.call("DELETE", f"/cards/{card['id']}/idLabels/{label_id}")
+        if wanted not in current:
+            self.call("POST", f"/cards/{card['id']}/idLabels", {"value": wanted})
+        card["idLabels"] = sorted((current - managed) | {wanted})
         if old_path and old_path != artifact.path:
             self.cards.pop(old_path, None)
         self.cards[artifact.path] = card

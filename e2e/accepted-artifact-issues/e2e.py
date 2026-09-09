@@ -28,6 +28,7 @@ REPOSITORIES = {
 RESOURCE_NAME = "Repofactory E2E – Accepted Artifacts"
 STATUSES = ("Accepted", "Ready", "Withdrawn")
 MANAGED_COMMENT = "<!-- repofactory:accepted-artifact-issues -->"
+LABEL_PREFIX = "artifact:"
 WORKFLOW = "accepted-artifact-issues.yml"
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parents[1]
@@ -697,6 +698,11 @@ class GitHubInspector:
                 item = items.get(issue["id"])
                 if not item or item["values"].get("Status") != status:
                     raise CheckError(f"GitHub issue {path} does not have status {status}")
+                kind, _ = artifact_metadata(path)
+                labels = [label["name"] for label in issue.get("labels", [])]
+                managed = [name for name in labels if name.startswith(LABEL_PREFIX)]
+                if managed != [f"{LABEL_PREFIX}{kind}"]:
+                    raise CheckError(f"GitHub issue {path} has incorrect type labels: {managed}")
             return result
 
         return retry_check(check)
@@ -730,11 +736,15 @@ class TrelloInspector:
         lists = self.api.request("GET", f"/boards/{self.board}/lists?filter=all")
         return {item["name"]: item["id"] for item in lists if not item["closed"]}
 
+    def labels(self) -> dict[str, str]:
+        labels = self.api.request("GET", f"/boards/{self.board}/labels?limit=1000")
+        return {item["id"]: item["name"] for item in labels}
+
     def cards(self) -> dict[str, dict[str, Any]]:
         cards = self.api.request(
             "GET",
             f"/boards/{self.board}/cards"
-            "?filter=all&fields=id,name,desc,url,shortUrl,closed,idList",
+            "?filter=all&fields=id,name,desc,url,shortUrl,closed,idList,idLabels",
         )
         result: dict[str, dict[str, Any]] = {}
         for card in cards:
@@ -756,6 +766,7 @@ class TrelloInspector:
     ) -> dict[str, Any]:
         cards = self.cards()
         lists = self.lists()
+        labels = self.labels()
         selected = {path: card for path, card in cards.items() if path in expected}
         if set(selected) != set(expected):
             raise CheckError(
@@ -771,6 +782,13 @@ class TrelloInspector:
                 raise CheckError(f"Trello card {path} does not have status {status}")
             description = card.get("desc") or ""
             kind, parent = artifact_metadata(path)
+            managed = [
+                labels[label_id]
+                for label_id in card.get("idLabels", [])
+                if labels.get(label_id, "").startswith(LABEL_PREFIX)
+            ]
+            if managed != [f"{LABEL_PREFIX}{kind}"]:
+                raise CheckError(f"Trello card {path} has incorrect type labels: {managed}")
             required = [
                 f"- Artifact: [`{path}`](",
                 "- Accepted version: [",

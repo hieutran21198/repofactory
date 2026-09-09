@@ -126,6 +126,38 @@ class QueueApi:
         return self.responses.pop(0)
 
 
+class GitHubAdapterTest(unittest.TestCase):
+    def test_upsert_replaces_managed_label_and_preserves_user_label(self):
+        path = "docs/artifact/feat-login/requirements/req-password.md"
+        artifact = MODULE.classify_artifact(path)
+        updated = {
+            "id": 7,
+            "number": 3,
+            "node_id": "node",
+            "html_url": "https://github.example/issues/3",
+            "body": "body",
+            "state": "open",
+            "labels": [{"name": "user-label"}, {"name": "artifact:requirement"}],
+        }
+        api = QueueApi([updated])
+        adapter = MODULE.GitHubAdapter(
+            {"ownership": "personal", "owner": "owner", "projectNumber": 1},
+            "owner/repo",
+            api,
+        )
+        adapter.issues[path] = {
+            **updated,
+            "labels": [{"name": "user-label"}, {"name": "artifact:task"}],
+        }
+
+        adapter.upsert(artifact, "Password", "body", "Accepted")
+
+        method, url, payload = api.requests[0]
+        self.assertEqual("PATCH", method)
+        self.assertIn("/repos/owner/repo/issues/3", url)
+        self.assertEqual(["user-label", "artifact:requirement"], payload["labels"])
+
+
 class TrelloAdapterTest(unittest.TestCase):
     def setUp(self):
         self.old_key = os.environ.get("TRELLO_API_KEY")
@@ -133,6 +165,12 @@ class TrelloAdapterTest(unittest.TestCase):
         os.environ["TRELLO_API_KEY"] = "key"
         os.environ["TRELLO_TOKEN"] = "token"
         self.statuses = {"feature-summary": "Accepted", "withdrawn": "Withdrawn"}
+
+    def labels(self):
+        return [
+            {"id": f"label-{kind}", "name": MODULE.type_label(kind), "color": color}
+            for kind, color in MODULE.TRELLO_LABEL_COLORS.items()
+        ]
 
     def tearDown(self):
         for name, value in (
@@ -158,6 +196,7 @@ class TrelloAdapterTest(unittest.TestCase):
                     {"id": "accepted", "name": "Accepted", "closed": False},
                     {"id": "withdrawn", "name": "Withdrawn", "closed": False},
                 ],
+                self.labels(),
                 [
                     {"id": "card", "desc": marker, "url": "https://trello/card", "closed": False},
                     {"id": "other", "desc": other_marker, "url": "https://trello/other", "closed": False},
@@ -189,6 +228,7 @@ class TrelloAdapterTest(unittest.TestCase):
                     {"id": "accepted", "name": "Accepted", "closed": False},
                     {"id": "withdrawn", "name": "Withdrawn", "closed": False},
                 ],
+                self.labels(),
                 [],
                 {
                     "id": "card",
@@ -196,7 +236,9 @@ class TrelloAdapterTest(unittest.TestCase):
                     "url": "https://trello/card-title",
                     "shortUrl": "https://trello/c/card",
                     "closed": False,
+                    "idLabels": ["user-label"],
                 },
+                None,
             ]
         )
         adapter = MODULE.TrelloAdapter({"boardId": "board"}, "owner/repo", api)
@@ -206,12 +248,32 @@ class TrelloAdapterTest(unittest.TestCase):
 
         self.assertEqual("card", ref.id)
         self.assertEqual("https://trello/c/card", ref.url)
-        method, url, payload = api.requests[-1]
+        method, url, payload = next(
+            request for request in api.requests if request[0] == "POST" and "/cards?" in request[1]
+        )
         self.assertEqual("POST", method)
         self.assertIn("/cards?", url)
         self.assertEqual(body, payload["desc"])
         self.assertEqual("accepted", payload["idList"])
+        self.assertEqual("POST", api.requests[-1][0])
+        self.assertIn("/cards/card/idLabels?", api.requests[-1][1])
+        self.assertEqual("label-feature-summary", api.requests[-1][2]["value"])
+        self.assertEqual(
+            ["label-feature-summary", "user-label"],
+            adapter.cards[path]["idLabels"],
+        )
         self.assert_no_custom_fields_request(api)
+
+    def test_label_merge_preserves_user_labels(self):
+        issue = {"labels": [{"name": "user-label"}, {"name": "artifact:task"}]}
+        self.assertEqual(
+            ["user-label", "artifact:requirement"],
+            MODULE.issue_label_names(issue, "requirement"),
+        )
+
+    def test_label_model_covers_all_artifact_kinds(self):
+        self.assertEqual(set(MODULE.ARTIFACT_KINDS), set(MODULE.GITHUB_LABEL_COLORS))
+        self.assertEqual(set(MODULE.ARTIFACT_KINDS), set(MODULE.TRELLO_LABEL_COLORS))
 
 
 class FakeAdapter:
