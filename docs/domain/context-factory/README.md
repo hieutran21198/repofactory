@@ -17,6 +17,10 @@ working rules the factory supplies to a generated repository.
 | Artifact issue | A project issue that represents one accepted feature artifact file. |
 | Repository blueprint | The selected options and generated files for one repository. |
 | Provider | An external system that receives artifact issues. |
+| Harness | A coding agent product that reads the rendered role files and the skills of a project. |
+| Implementation expert | A role that owns phase 4 of the artifact-driven documentation model for one component. |
+| Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
+| Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
 
 ## Business rules
 

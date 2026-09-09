@@ -12,3 +12,4 @@ before you add or change a feature.
 | [DDD design](feat-ddd-design/README.md) | Adds domain-driven design as a design method that a project can select. |
 | [Single repository architecture](feat-single-repo-arch/README.md) | Adds the single repository architecture: one repository is one component. |
 | [Accepted artifact issues](feat-accepted-artifact-issues/README.md) | Creates project issues for accepted feature artifacts. |
+| [Expert role skill](feat-expert-role-skill/README.md) | Ships a skill that sets up an implementation expert role from the files in the project only. |
