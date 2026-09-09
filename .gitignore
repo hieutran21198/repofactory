@@ -9,6 +9,9 @@ devenv.local.yaml
 # pre-commit
 .pre-commit-config.yaml
 
+# env
+.env
+
 # Agent harness output
 .claude
 .opencode
