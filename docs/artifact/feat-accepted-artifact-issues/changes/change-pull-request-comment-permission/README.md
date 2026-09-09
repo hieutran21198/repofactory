@@ -15,4 +15,5 @@ change the access of the configured provider token.
 ## Artifacts
 
 - [Specifications](specifications/README.md)
+- [Implementation plan](tasks/README.md)
 
