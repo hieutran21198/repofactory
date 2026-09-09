@@ -21,6 +21,7 @@ working rules the factory supplies to a generated repository.
 | Implementation expert | A role that owns phase 4 of the artifact-driven documentation model for one component. |
 | Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
 | Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
+| Documentation site | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. |
 
 ## Business rules
 

@@ -14,3 +14,4 @@ write two rows.
 | Implementation expert | context-factory | A role that owns phase 4 of the artifact-driven documentation model for one component, and that gives the solution expert the specifications and the tasks of that component. | Solution expert |
 | Role | context-factory | An agent persona with one body and one declaration, rendered as one role file for each harness in use. | Skill |
 | Skill | context-factory | A folder of instructions that a harness loads on request, copied to the skill folder of each harness in use. | Role |
+| Documentation site | context-factory | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. | Wiki |

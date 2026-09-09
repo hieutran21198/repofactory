@@ -13,3 +13,4 @@ before you add or change a feature.
 | [Single repository architecture](feat-single-repo-arch/README.md) | Adds the single repository architecture: one repository is one component. |
 | [Accepted artifact issues](feat-accepted-artifact-issues/README.md) | Creates project issues for accepted feature artifacts. |
 | [Expert role skill](feat-expert-role-skill/README.md) | Ships a skill that sets up an implementation expert role from the files in the project only. |
+| [Documentation site](feat-docs-site/README.md) | Renders the `docs/` tree as a website and publishes it to GitHub Pages from a generated workflow. |
