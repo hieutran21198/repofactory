@@ -6,6 +6,7 @@ write two rows.
 | Term | Context | Meaning | Not the same as |
 | --- | --- | --- | --- |
 | Accepted artifact | context-factory | A feature artifact that exists on the default branch after a pull request merges. | Artifact proposal |
+| Acceptance notification | context-factory | One team message that summarizes accepted artifact changes from a merged pull request. | Artifact issue |
 | Artifact issue | context-factory | A project issue that represents one accepted feature artifact file. | Pull request |
 | Artifact proposal | context-factory | An artifact change in a pull request that has not merged. | Accepted artifact |
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |

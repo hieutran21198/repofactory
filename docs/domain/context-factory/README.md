@@ -14,6 +14,7 @@ working rules the factory supplies to a generated repository.
 | Term | Meaning |
 | --- | --- |
 | Accepted artifact | A feature artifact on the default branch after a pull request merges. |
+| Acceptance notification | One team message that summarizes accepted artifact changes from a merged pull request. |
 | Artifact issue | A project issue that represents one accepted feature artifact file. |
 | Repository blueprint | The selected options and generated files for one repository. |
 | Provider | An external system that receives artifact issues. |
@@ -30,6 +31,7 @@ working rules the factory supplies to a generated repository.
 - One accepted feature artifact file has one issue in one selected provider.
 - A child artifact issue points to its parent artifact issue.
 - Provider identifiers do not occur in artifact files.
+- An acceptance notification follows successful artifact issue synchronization.
 
 ## Inbound messages
 
@@ -44,6 +46,7 @@ working rules the factory supplies to a generated repository.
 | --- | --- | --- |
 | Repository blueprint composed | event | Repository maintainer |
 | Artifact issue synchronized | event | Repository maintainer |
+| Acceptance notification sent | event | Repository maintainer |
 
 ## Aggregates
 
