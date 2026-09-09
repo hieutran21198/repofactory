@@ -26,6 +26,7 @@ adapter but does not activate a composition.
 - An enabled documentation site composition needs the artifact-driven model, the multiple
   repositories architecture, and GitHub Actions.
 - An enabled documentation site composition has a title, a site URL, and a base URL.
+- An enabled deployment notification selects Google Chat or Slack and one webhook secret name.
 
 ## Corrective policies
 
@@ -34,6 +35,8 @@ adapter but does not activate a composition.
 | Artifact issue synchronization failed | Keep the repository artifacts unchanged and report the failure. |
 | Accepted artifacts synchronized | Send one acceptance notification when notification is enabled. |
 | Acceptance notification failed | Retry delivery and report the final failure. |
+| Documentation site deployed | Send one deployment notification when notification is enabled. |
+| Deployment notification failed | Retry delivery and report the last failure. |
 
 ## Handled commands
 

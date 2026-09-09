@@ -1,7 +1,7 @@
 # Change: Send documentation site deployment notifications
 
 **Feature:** [Documentation site](../../README.md)
-**Type:** Requirements
+**Type:** Specifications
 
 ## Reason
 
@@ -16,5 +16,6 @@ The workflow sends the message only after GitHub Pages deploys the site.
 ## Artifacts
 
 - [Requirements](requirements/README.md)
-- Specifications
+- [Specifications](specifications/README.md)
+- [Decisions](decisions/)
 - Implementation plan
