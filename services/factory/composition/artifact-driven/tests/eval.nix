@@ -114,6 +114,7 @@ let
     };
   };
   noArchOn = evalModule { architecture = "unset"; };
+  documentationOff = evalModule { documentation = "unset"; };
   githubOn = evalModule {
     ciProvider = "github-actions";
     projectProvider = "github-projects";
@@ -332,6 +333,37 @@ let
     &&
       builtins.match ".*`read` and `write` scopes.*" (builtins.readFile credentialGuide.source) != null;
 
+  skillPath = ../_assets/agent/skill/by-role/solution-expert/expert-role;
+  skillFiles = [
+    "SKILL.md"
+    "references/role-template.md"
+    "references/role-builder.md"
+  ];
+  skillText = file: builtins.readFile (skillPath + "/${file}");
+  forbidden = [
+    ".*services/factory.*"
+    ".*libs/nix.*"
+    ".*nix-instantiate.*"
+  ];
+
+  skillShipped = builtins.all (cfg: cfg.factory.domain.agent.skill.general.expert-role == skillPath) [
+    configs.multipleOn
+    configs.multipleOff
+    configs.singleOn
+    configs.singleOff
+    noArchOn
+  ];
+  skillFilesExist = builtins.all (file: builtins.pathExists (skillPath + "/${file}")) skillFiles;
+  skillOmitted =
+    !(builtins.hasAttr "expert-role" (documentationOff.factory.domain.agent.skill.general or { }));
+  skillIsGeneric = builtins.all (
+    file: builtins.all (pattern: builtins.match pattern (skillText file) == null) forbidden
+  ) skillFiles;
+  skillFrontmatter = builtins.match "---\nname: expert-role\n.*" (skillText "SKILL.md") != null;
+  solutionExpertNamesSkill =
+    builtins.match ".*expert-role.*" (base "solution-expert") != null
+    && builtins.match ".*expert-role.*" (base "requirement-expert") == null;
+
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
     config.factory._utils = optionUtils;
@@ -362,6 +394,12 @@ assert workflowsUseSelectedSecrets;
 assert credentialGuideMatches;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
+assert skillShipped;
+assert skillFilesExist;
+assert skillOmitted;
+assert skillIsGeneric;
+assert skillFrontmatter;
+assert solutionExpertNamesSkill;
 {
   inherit
     sourcesMatch
@@ -381,5 +419,11 @@ assert providerDoesNotOwnPolicy;
     credentialGuideMatches
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
+    skillShipped
+    skillFilesExist
+    skillOmitted
+    skillIsGeneric
+    skillFrontmatter
+    solutionExpertNamesSkill
     ;
 }
