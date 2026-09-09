@@ -12,4 +12,3 @@ synchronizer uses this access only for its managed comment.
 | ID | Specification | Covers |
 | --- | --- | --- |
 | [spec-comment-permission](spec-comment-permission.md) | Give the workflow access to write its managed comment. | req-portable-links |
-

@@ -14,4 +14,3 @@
 - GitHub Projects setup does not need Trello credentials.
 - Setup keeps the state of providers that it does not select.
 - The unit checks pass.
-

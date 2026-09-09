@@ -15,4 +15,3 @@
 - The GitHub Projects check passes.
 - The Trello check passes.
 - The cleanup step closes or archives all test items.
-

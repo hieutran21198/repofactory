@@ -13,7 +13,7 @@ asset of another domain. This specification replaces `spec-single-context-home` 
 
 The asset layout:
 
-```
+```text
 services/factory/domain/design/ddd/_assets/
     docs/domain/README.md                                The neutral seeds.
     docs/domain/context-map.md

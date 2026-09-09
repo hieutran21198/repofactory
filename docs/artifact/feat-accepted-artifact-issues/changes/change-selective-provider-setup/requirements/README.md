@@ -17,4 +17,3 @@ provider.
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | [req-select-provider](req-select-provider.md) | The setup command must accept a provider selection. | Must |
-

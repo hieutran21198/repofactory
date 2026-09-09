@@ -23,4 +23,3 @@ Add a reusable component that deploys and checks the generated provider integrat
 
 Run the command-line help and the local checks. Make sure that no command writes a credential to
 a file or to the output.
-

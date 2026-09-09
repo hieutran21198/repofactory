@@ -16,4 +16,3 @@ integration to two test repositories. It uses pull requests and GitHub Actions f
 ## Decisions
 
 - [Keep persistent provider sandboxes](../decisions/adr-persistent-sandboxes.md)
-

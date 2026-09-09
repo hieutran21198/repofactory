@@ -12,4 +12,3 @@ credentials and creates resources only for the selected providers.
 | ID | Specification | Covers |
 | --- | --- | --- |
 | [spec-selective-setup](spec-selective-setup.md) | Define selective setup and partial state. | req-select-provider |
-

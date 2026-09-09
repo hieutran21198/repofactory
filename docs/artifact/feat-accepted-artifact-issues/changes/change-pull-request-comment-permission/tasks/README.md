@@ -13,4 +13,3 @@
 - Generated workflows give write access to pull requests.
 - The module evaluation check passes.
 - The GitHub Projects end-to-end check can write its managed comment.
-

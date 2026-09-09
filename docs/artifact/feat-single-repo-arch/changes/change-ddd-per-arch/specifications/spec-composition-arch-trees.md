@@ -15,7 +15,7 @@ architecture and stay outside the trees. This specification replaces the asset p
 
 The asset layout:
 
-```
+```text
 services/factory/composition/artifact-driven/_assets/
     agent/role/<role>/ROLE.md                          The base roles.
     docs/README.md                                     The knowledge index.

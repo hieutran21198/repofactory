@@ -17,4 +17,3 @@ sets up both providers.
 - [Requirements](requirements/README.md)
 - [Specifications](specifications/README.md)
 - [Implementation plan](tasks/README.md)
-
