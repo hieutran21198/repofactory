@@ -16,5 +16,6 @@ The workflow sends the summary only after artifact synchronization succeeds.
 ## Artifacts
 
 - [Requirements](requirements/README.md)
-- Specifications
+- [Specifications](specifications/README.md)
+- [Decisions](decisions/)
 - Implementation plan
