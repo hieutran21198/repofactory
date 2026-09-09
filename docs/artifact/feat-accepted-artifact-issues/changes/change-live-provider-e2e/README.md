@@ -16,4 +16,4 @@ separate provider resources. It does not change the generated integration contra
 
 - [Specifications](specifications/README.md)
 - [Decisions](decisions/adr-persistent-sandboxes.md)
-
+- [Implementation plan](tasks/README.md)
