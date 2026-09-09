@@ -15,7 +15,7 @@ supply native sub-issues.
 
 ## Decision
 
-Use native GitHub repository issues and sub-issues. Use Trello cards, parent fields, and child
+Use native GitHub repository issues and sub-issues. Use Trello card descriptions and child
 checklists.
 
 ## Consequences

@@ -281,30 +281,6 @@ def ensure_trello_board(api: TrelloApi) -> dict[str, Any]:
             api.request(
                 "POST", f"/boards/{board['id']}/lists", {"name": status, "pos": "bottom"}
             )
-    fields = api.request("GET", f"/boards/{board['id']}/customFields")
-    for name in ("Artifact path", "Artifact type", "Parent artifact"):
-        matches = [field for field in fields if field["name"] == name and field["type"] == "text"]
-        if len(matches) > 1:
-            raise CheckError(f"The Trello board has duplicate text fields named {name}")
-        if not matches:
-            try:
-                api.request(
-                    "POST",
-                    "/customFields",
-                    {
-                        "idModel": board["id"],
-                        "modelType": "board",
-                        "name": name,
-                        "type": "text",
-                        "pos": "bottom",
-                        "display_cardFront": False,
-                    },
-                )
-            except CheckError as error:
-                raise CheckError(
-                    f"Cannot create the Trello field {name}. "
-                    f"Enable Custom Fields on the test board. {error}"
-                ) from error
     return board
 
 
@@ -579,6 +555,23 @@ def marker_path(repository: str, body: str) -> str | None:
     return match.group(1) if match else None
 
 
+def artifact_metadata(path: str) -> tuple[str, str | None]:
+    source = Path(path)
+    root = "/".join(source.parts[:3])
+    relative = source.parts[3:]
+    if relative == ("README.md",):
+        return "feature-summary", None
+    if relative == ("requirements", "README.md"):
+        return "master-requirement", f"{root}/README.md"
+    if relative[0:1] == ("requirements",) and source.name.startswith("req-"):
+        return "requirement", f"{root}/requirements/README.md"
+    if relative == ("tasks", "README.md"):
+        return "implementation-plan", f"{root}/README.md"
+    if relative[0:1] == ("tasks",) and source.name.startswith("task-"):
+        return "task", f"{root}/tasks/README.md"
+    raise CheckError(f"The Trello check cannot classify {path}")
+
+
 class GitHubInspector:
     def __init__(self, repository: str, state: dict[str, Any]):
         self.repository = repository
@@ -720,10 +713,6 @@ class TrelloInspector:
         lists = self.api.request("GET", f"/boards/{self.board}/lists?filter=all")
         return {item["name"]: item["id"] for item in lists if not item["closed"]}
 
-    def fields(self) -> dict[str, str]:
-        fields = self.api.request("GET", f"/boards/{self.board}/customFields")
-        return {item["name"]: item["id"] for item in fields}
-
     def cards(self) -> dict[str, dict[str, Any]]:
         cards = self.api.request(
             "GET",
@@ -755,7 +744,6 @@ class TrelloInspector:
             raise CheckError(
                 f"Trello card paths differ: expected {sorted(expected)}, got {sorted(selected)}"
             )
-        fields = self.fields()
         result: dict[str, Any] = {}
         for path, status in expected.items():
             card = selected[path]
@@ -764,13 +752,23 @@ class TrelloInspector:
                 raise CheckError(f"Trello changed the card identity for {path}")
             if card["idList"] != lists[status]:
                 raise CheckError(f"Trello card {path} does not have status {status}")
-            values = self.api.request("GET", f"/cards/{card['id']}/customFieldItems")
-            by_id = {
-                item["idCustomField"]: item.get("value", {}).get("text", "")
-                for item in values
-            }
-            if by_id.get(fields["Artifact path"]) != path:
-                raise CheckError(f"Trello card {path} has an incorrect Artifact path field")
+            description = card.get("desc") or ""
+            kind, parent = artifact_metadata(path)
+            required = [
+                f"- Artifact: [`{path}`](",
+                "- Accepted version: [",
+                f"- Artifact type: `{kind}`",
+                f"<!-- repofactory:artifact:{self.repository}:{path} -->",
+            ]
+            if parent:
+                parent_card = cards.get(parent)
+                if parent_card is None:
+                    raise CheckError(f"Trello card {path} does not have its parent card")
+                parent_url = parent_card.get("url") or parent_card["shortUrl"]
+                required.append(f"- Parent artifact: [`{parent}`]({parent_url})")
+            for value in required:
+                if value not in description:
+                    raise CheckError(f"Trello card {path} does not include {value}")
         return result
 
     def assert_link(self, parent: str, child: str) -> None:

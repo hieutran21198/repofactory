@@ -348,7 +348,6 @@ class TrelloAdapter:
         self.token = os.environ.get("TRELLO_TOKEN", "")
         self.base = "https://api.trello.com/1"
         self.lists: dict[str, str] = {}
-        self.fields: dict[str, dict[str, Any]] = {}
         self.cards: dict[str, dict[str, Any]] = {}
 
     def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> Any:
@@ -374,13 +373,8 @@ class TrelloAdapter:
                 self.lists[status] = matches[0]
         if missing:
             fail("The Trello board needs one open list for each status: " + ", ".join(sorted(missing)))
-        custom_fields = self.call("GET", f"/boards/{board}/customFields")
-        for name in ("Artifact path", "Artifact type", "Parent artifact"):
-            matches = [field for field in custom_fields if field["name"] == name and field["type"] == "text"]
-            if len(matches) != 1:
-                fail(f"The Trello board needs one text custom field named {name}")
-            self.fields[name] = matches[0]
-        marker_pattern = re.compile(r"<!-- repofactory:artifact:[^:]+/[^:]+:(.+) -->")
+        marker_prefix = re.escape(f"<!-- repofactory:artifact:{self.repository}:")
+        marker_pattern = re.compile(marker_prefix + r"(.+) -->")
         cards = self.call("GET", f"/boards/{board}/cards?filter=all&fields=id,name,desc,url,shortUrl,closed")
         for card in cards:
             match = marker_pattern.search(card.get("desc") or "")
@@ -389,12 +383,6 @@ class TrelloAdapter:
                 if path in self.cards:
                     fail(f"Two Trello cards have the artifact marker for {path}")
                 self.cards[path] = card
-
-    def _set_field(self, card_id: str, name: str, value: str) -> None:
-        field_id = self.fields[name]["id"]
-        self.call(
-            "PUT", f"/cards/{card_id}/customField/{field_id}/item", {"value": {"text": value}}
-        )
 
     def lookup(self, path: str) -> IssueRef | None:
         card = self.cards.get(path)
@@ -424,9 +412,6 @@ class TrelloAdapter:
         if old_path and old_path != artifact.path:
             self.cards.pop(old_path, None)
         self.cards[artifact.path] = card
-        self._set_field(card["id"], "Artifact path", artifact.path)
-        self._set_field(card["id"], "Artifact type", artifact.kind)
-        self._set_field(card["id"], "Parent artifact", artifact.parent or "")
         return IssueRef(card["id"], card.get("url") or card["shortUrl"], created, card.get("desc") or body)
 
     def link(self, parent: IssueRef, child: IssueRef) -> None:
@@ -513,11 +498,12 @@ class Synchronizer:
         artifact = classify_artifact(path)
         if artifact is None:
             return None
+        parent = self.adapter.lookup(artifact.parent) if artifact.parent else None
         title = f"{artifact_title(path)} [Withdrawn]"
         ref = self.adapter.upsert(
             artifact,
             title,
-            self.make_body(artifact),
+            self.make_body(artifact, parent),
             self.statuses["withdrawn"],
             withdrawn=True,
         )

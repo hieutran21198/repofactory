@@ -15,3 +15,4 @@ issues show the artifact hierarchy and link to the accepted repository content.
 ## Changes
 
 - [Composition-owned artifact policy](changes/change-composition-owned-policy/README.md)
+- [Support Trello Free workspaces](changes/change-trello-free-workspaces/README.md)

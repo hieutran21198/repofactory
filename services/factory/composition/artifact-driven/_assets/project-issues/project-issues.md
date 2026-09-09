@@ -57,16 +57,14 @@ The workflow makes repository issues. It connects child issues with the GitHub s
 ## Trello setup
 
 Use the [provider credential guide](project-issue-credentials.md) to create and store the API key
-and user token.
+and user token. Trello Free workspaces are supported. Custom Fields are not required.
 
 1. Make one board.
 2. Make one open list for every configured artifact status.
-3. Add a text custom field named `Artifact path`.
-4. Add a text custom field named `Artifact type`.
-5. Add a text custom field named `Parent artifact`.
-6. Add the API key and user token with the configured repository secret names.
+3. Add the API key and user token with the configured repository secret names.
 
-The workflow adds child card URLs to a `Children` checklist on the parent card.
+The workflow keeps artifact metadata in each card description. It adds child card URLs to a
+`Children` checklist on the parent card. It does not change existing Custom Fields on paid boards.
 
 ## Links
 
@@ -78,4 +76,4 @@ Do not add issue URLs to artifact frontmatter. A provider change must not change
 ## Errors
 
 The workflow checks the project schema before its first write. It stops with an error if a required
-project, status, list, custom field, or credential does not exist.
+project, status, list, or credential does not exist.

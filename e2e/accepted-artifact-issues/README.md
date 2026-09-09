@@ -40,6 +40,9 @@ python3 accepted-artifact-issues/e2e.py setup --provider trello
 All setup selections need `GH_TOKEN` because each provider uses a GitHub repository. Only the
 Trello selection needs the Trello credentials.
 
+The Trello check supports Trello Free workspaces. It uses lists, descriptions, cards, and
+checklists. It does not require or change Custom Fields.
+
 Run the two provider checks:
 
 ```console

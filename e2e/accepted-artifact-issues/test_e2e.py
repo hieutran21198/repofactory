@@ -83,6 +83,52 @@ class PureFunctionTest(unittest.TestCase):
         self.assertEqual("Ready", statuses[scenario.paths["task"]])
         self.assertEqual("Accepted", statuses[scenario.paths["feature"]])
 
+    def test_classifies_trello_description_metadata(self):
+        root = "docs/artifact/feat-a"
+        self.assertEqual(
+            ("feature-summary", None),
+            MODULE.artifact_metadata(f"{root}/README.md"),
+        )
+        self.assertEqual(
+            ("requirement", f"{root}/requirements/README.md"),
+            MODULE.artifact_metadata(f"{root}/requirements/req-a.md"),
+        )
+
+
+class FakeTrelloApi:
+    def __init__(self):
+        self.requests = []
+
+    def request(self, method, path, data=None):
+        self.requests.append((method, path, data))
+        if path.startswith("/members/me/boards"):
+            return [
+                {
+                    "id": "board",
+                    "name": MODULE.RESOURCE_NAME,
+                    "closed": False,
+                    "url": "https://trello.example/board",
+                    "prefs": {"permissionLevel": "private"},
+                }
+            ]
+        if path == "/boards/board/lists?filter=all":
+            return [
+                {"id": status.lower(), "name": status, "closed": False}
+                for status in MODULE.STATUSES
+            ]
+        raise AssertionError(f"Unexpected request: {method} {path}")
+
+
+class TrelloSetupTest(unittest.TestCase):
+    def test_reuses_board_without_custom_fields_requests(self):
+        api = FakeTrelloApi()
+
+        board = MODULE.ensure_trello_board(api)
+
+        self.assertEqual("board", board["id"])
+        paths = [path.lower() for _, path, _ in api.requests]
+        self.assertFalse(any("customfield" in path for path in paths), paths)
+
 
 class RendererTest(unittest.TestCase):
     def test_renders_github_projects_without_trello_state(self):
@@ -112,6 +158,11 @@ class RendererTest(unittest.TestCase):
                 )
                 config = json.loads(files[".github/artifact-issues/config.json"])
                 self.assertEqual(provider, config["provider"])
+                guide = files[
+                    "docs/wiki/documentation/artifact-driven/project-issues.md"
+                ]
+                self.assertIn("Trello Free workspaces are supported", guide)
+                self.assertIn("Custom Fields are not required", guide)
 
 
 if __name__ == "__main__":
