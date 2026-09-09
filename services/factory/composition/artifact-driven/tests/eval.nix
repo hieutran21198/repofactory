@@ -398,6 +398,9 @@ let
     &&
       builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER.*"
         githubOn.files.".github/workflows/accepted-artifact-issues.yml".text == null;
+  notificationWorkflowIndentation =
+    builtins.match ".*\n          ARTIFACT_ISSUES_RESULT:.*\n\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3.*\n        env:\n          ARTIFACT_ISSUES_RESULT:.*\n          ARTIFACT_NOTIFICATION_PROVIDER: slack.*" slackWorkflow
+    != null;
   credentialGuide =
     githubOn.files."docs/wiki/documentation/artifact-driven/project-issue-credentials.md";
   credentialGuideMatches =
@@ -484,6 +487,7 @@ assert workflowsUseSelectedSecrets;
 assert workflowsCanWritePullRequestComments;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
+assert notificationWorkflowIndentation;
 assert credentialGuideMatches;
 assert notificationGuidesMatch;
 assert compositionOwnsPolicy;
@@ -513,6 +517,7 @@ assert solutionExpertNamesSkill;
     workflowsCanWritePullRequestComments
     notificationFilesMatch
     notificationWorkflowsMatch
+    notificationWorkflowIndentation
     credentialGuideMatches
     notificationGuidesMatch
     compositionOwnsPolicy

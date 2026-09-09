@@ -20,8 +20,8 @@ let
             trello = config.${namespace}.domain.project-management.provider.trello;
           in
           "TRELLO_API_KEY: \${{ secrets.${trello.api-key-secret} }}\n          TRELLO_TOKEN: \${{ secrets.${trello.token-secret} }}";
-      resultEnvironment = lib.optionalString notificationEnabled "\n                ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json";
-      notificationStep = lib.optionalString notificationEnabled "\n            - name: Notify the team about accepted artifacts\n              if: github.event_name == 'pull_request_target'\n              run: python3 .github/artifact-issues/notify.py\n              env:\n                ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json\n                ARTIFACT_NOTIFICATION_PROVIDER: ${notification.provider}\n                ARTIFACT_NOTIFICATION_WEBHOOK: \${{ secrets.${notification.webhook-secret} }}";
+      resultEnvironment = lib.optionalString notificationEnabled "\n          ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json";
+      notificationStep = lib.optionalString notificationEnabled "\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3 .github/artifact-issues/notify.py\n        env:\n          ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json\n          ARTIFACT_NOTIFICATION_PROVIDER: ${notification.provider}\n          ARTIFACT_NOTIFICATION_WEBHOOK: \${{ secrets.${notification.webhook-secret} }}";
     in
     ''
       name: Accepted artifact issues

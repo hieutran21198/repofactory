@@ -203,6 +203,28 @@ class RendererTest(unittest.TestCase):
         self.assertEqual("planning", config["trello"]["boardId"])
         self.assertEqual("implementation", config["trello"]["implementationBoardId"])
 
+    def test_renders_a_valid_slack_notification_step(self):
+        files = MODULE.render_files(
+            "trello",
+            {"trello_board": {"id": "board"}},
+            notification_provider="slack",
+            notification_secret="TEAM_WEBHOOK",
+        )
+
+        self.assertIn(".github/artifact-issues/notify.py", files)
+        self.assertIn(
+            """          ARTIFACT_ISSUES_RESULT: ${{ runner.temp }}/accepted-artifacts.json
+
+      - name: Notify the team about accepted artifacts
+        if: github.event_name == 'pull_request_target'
+        run: python3 .github/artifact-issues/notify.py
+        env:
+          ARTIFACT_ISSUES_RESULT: ${{ runner.temp }}/accepted-artifacts.json
+          ARTIFACT_NOTIFICATION_PROVIDER: slack
+          ARTIFACT_NOTIFICATION_WEBHOOK: ${{ secrets.TEAM_WEBHOOK }}""",
+            files[".github/workflows/accepted-artifact-issues.yml"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

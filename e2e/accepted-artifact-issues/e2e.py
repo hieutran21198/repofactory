@@ -332,7 +332,12 @@ def delete_file(repository: str, path: str, branch: str, message: str) -> None:
     )
 
 
-def render_files(provider: str, state: dict[str, Any]) -> dict[str, str]:
+def render_files(
+    provider: str,
+    state: dict[str, Any],
+    notification_provider: str = "unset",
+    notification_secret: str = "ARTIFACT_NOTIFICATION_WEBHOOK",
+) -> dict[str, str]:
     args = [
         "nix-instantiate",
         "--eval",
@@ -354,6 +359,12 @@ def render_files(provider: str, state: dict[str, Any]) -> dict[str, str]:
         "--argstr",
         "trelloImplementationBoard",
         state.get("trello_implementation_board", {}).get("id", ""),
+        "--argstr",
+        "notificationProvider",
+        notification_provider,
+        "--argstr",
+        "notificationSecret",
+        notification_secret,
     ]
     return json.loads(run_command(args))
 

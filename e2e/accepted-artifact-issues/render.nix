@@ -4,6 +4,8 @@
   projectNumber ? 1,
   trelloBoard ? "unused",
   trelloImplementationBoard ? "",
+  notificationProvider ? "unset",
+  notificationSecret ? "ARTIFACT_NOTIFICATION_WEBHOOK",
 }:
 let
   optionUtils = {
@@ -26,6 +28,7 @@ let
     mkIf = condition: value: if condition then value else { };
     mkForce = value: value;
     optionalString = condition: string: if condition then string else "";
+    optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
     foldl' = builtins.foldl';
     nameValuePair = name: value: { inherit name value; };
@@ -90,6 +93,10 @@ let
       composition.artifact-driven.project-issues = {
         enable = true;
         artifact-status = statuses;
+        notification = {
+          provider = notificationProvider;
+          webhook-secret = notificationSecret;
+        };
       };
     };
   };
@@ -99,7 +106,8 @@ let
     ".github/artifact-issues/sync.py"
     ".github/artifact-issues/config.json"
     "docs/wiki/documentation/artifact-driven/project-issues.md"
-  ];
+  ]
+  ++ lib.optional (notificationProvider != "unset") ".github/artifact-issues/notify.py";
   files = module.config.files;
 in
 builtins.listToAttrs (
