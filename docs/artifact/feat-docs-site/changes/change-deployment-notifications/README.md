@@ -18,4 +18,4 @@ The workflow sends the message only after GitHub Pages deploys the site.
 - [Requirements](requirements/README.md)
 - [Specifications](specifications/README.md)
 - [Decisions](decisions/)
-- Implementation plan
+- [Implementation plan](tasks/README.md)
