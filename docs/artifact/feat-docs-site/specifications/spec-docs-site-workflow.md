@@ -11,15 +11,19 @@ GitHub Pages. It runs on a push that touches the docs, the site project, or the 
 A build job runs on the default branch only. A deploy job publishes the build output. The
 repository owner sets the Pages source to "GitHub Actions" one time.
 
+When a notification provider is selected, the deploy job sends one message after the Pages action
+succeeds. The message goes to Google Chat or Slack.
+
 ## Contract
 
 ### File
 
 | Generated path | copyMode | Source |
 | --- | --- | --- |
-| `.github/workflows/docs-site.yml` | `copy` | `./_assets/.github/workflows/docs-site.yml` |
+| `.github/workflows/docs-site.yml` | `copy` | `text = workflow docsSite.notification` |
 
-The file has no Nix interpolation. The module renders it with `source`.
+The module renders the workflow from a Nix string. It adds notification permissions and steps only
+when a provider is selected.
 
 ### Workflow
 
@@ -129,7 +133,18 @@ repository root, not to the working directory.
 | `environment.name` | `github-pages` |
 | `environment.url` | `${{ steps.deployment.outputs.page_url }}` |
 
-One step: `actions/deploy-pages@v4` with `id: deployment`.
+The first step is `actions/deploy-pages@v4` with `id: deployment`.
+
+When notification is enabled, the deploy job also has `contents: read`. These steps follow the
+deployment step:
+
+| Step | Action or command | Inputs |
+| --- | --- | --- |
+| Check out notification code | `actions/checkout@v4` | `persist-credentials: false` |
+| Notify the team | `python3 .github/docs-site/notify.py` | Provider, webhook, deployment URL, repository, ref, commit SHA, and run URL in the environment. |
+
+The notifier step runs for a successful push deployment and a successful manual deployment. The
+normal step order prevents it from running after the Pages action fails.
 
 ### Manual step
 
@@ -146,5 +161,6 @@ the build job. GitHub skips the deploy job, because its `needs` job did not run.
 keeps the website of the default branch.
 The deploy job fails when the Pages source is not "GitHub Actions". The error message names the
 Pages settings.
-The check `workflowMatches` in `tests/eval.nix` fails if the file text does not match one of the
-six patterns of `spec-eval-checks`.
+If notification delivery fails after all attempts, GitHub Pages keeps the deployed website. The
+workflow reports a failure. The checks in `tests/eval.nix` check the disabled and enabled workflow
+variants.

@@ -6,10 +6,9 @@
 
 ## Description
 
-When `factory.composition.artifact-driven.docs-site.enable` is `true`, the module renders ten
-files. Eight files are in `copy` mode: the factory owns them and overwrites them on each shell
-entry. Two files are in `seed` mode: the factory writes them one time, when the file does not
-exist, and the project owns them after that.
+When `factory.composition.artifact-driven.docs-site.enable` is `true`, the module renders ten base
+files. Eight files are in `copy` mode. Two files are in `seed` mode. When a notification provider
+is selected, the module renders one more file in `copy` mode.
 
 Nix owns one settings file, `site.json`. The authored file `docusaurus.config.js` reads it with
 `require('./site.json')`. This is the pattern of `services/factory/domain/agent/harness/codex/`:
@@ -32,20 +31,21 @@ factory-owned folder.
 | `apps/documentation/.gitignore` | `copy` | `source = ./_assets/apps/documentation/.gitignore` |
 | `apps/documentation/src/css/custom.css` | `seed` | `source = ./_assets/apps/documentation/src/css/custom.css` |
 | `apps/documentation/README.md` | `seed` | `source = ./_assets/apps/documentation/README.md` |
-| `.github/workflows/docs-site.yml` | `copy` | `source = ./_assets/.github/workflows/docs-site.yml` |
+| `.github/workflows/docs-site.yml` | `copy` | `text = workflow docsSite.notification` |
 | `docs/wiki/documentation/artifact-driven/docs-site.md` | `copy` | `source = ./_assets/docs/wiki/documentation/artifact-driven/docs-site.md` |
+| `.github/docs-site/notify.py` | `copy` | `source = ./_assets/.github/docs-site/notify.py`; only present when notification is enabled. |
 
 `docsSite` is `config.factory.composition.artifact-driven.docs-site`. Each `source` path is
-relative to `services/factory/composition/artifact-driven/docs-site/default.nix`. The rule is:
-the source of an authored file is `_assets/<generated path>`.
+relative to the module. An authored source uses `_assets/<generated path>`. Nix renders the
+settings file and the workflow text.
 
 ### Asset folder
 
 ```text
 services/factory/composition/artifact-driven/docs-site/_assets/
 ├── .github/
-│   └── workflows/
-│       └── docs-site.yml
+│   └── docs-site/
+│       └── notify.py
 ├── apps/
 │   └── documentation/
 │       ├── .gitignore
@@ -64,7 +64,7 @@ services/factory/composition/artifact-driven/docs-site/_assets/
                 └── docs-site.md
 ```
 
-The asset folder has no `site.json`. Nix renders `site.json` from the options.
+The asset folder has no `site.json` or workflow file. Nix renders both files from the options.
 
 ### `site.json`
 

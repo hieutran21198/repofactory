@@ -1,7 +1,7 @@
 # Change: Send documentation site deployment notifications
 
 **Feature:** [Documentation site](../../README.md)
-**Type:** Specifications
+**Type:** Requirements
 
 ## Reason
 

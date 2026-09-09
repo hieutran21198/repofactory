@@ -16,7 +16,7 @@ website too.
 The repository maintainer has made these decisions. They are constraints of this feature:
 
 - The factory delivers the website as a composition option. The option is off by default. A
-  project configures only a title, a site URL, and a base URL.
+  project configures a title, a site URL, and a base URL. Notification settings are optional.
 - A generated GitHub Actions workflow publishes the website to GitHub Pages on each push to the
   default branch. The feature needs the ci-cd provider `github-actions`. After the repository
   owner sets the Pages source to "GitHub Actions" one time, no manual step remains.
@@ -29,6 +29,8 @@ The repository maintainer has made these decisions. They are constraints of this
   architecture, and the ci-cd provider `github-actions`. Evaluation must stop with a clear
   message when a project enables the feature without one of them.
 - The factory pins the dependency versions of the site tooling. A project does not pin them.
+- A project can optionally send a deployment message to Google Chat or Slack. The message follows
+  a successful push or manual deployment.
 
 ## Scope
 
@@ -41,6 +43,7 @@ The repository maintainer has made these decisions. They are constraints of this
 - In scope: An evaluation error when the option is on without the required model, architecture,
   or ci-cd provider.
 - In scope: Dependency versions of the site tooling that the factory pins.
+- In scope: An optional Google Chat or Slack message after a successful deployment.
 - Out of scope: The single repository architecture.
 - Out of scope: A ci-cd provider other than `github-actions`.
 - Out of scope: A publication target other than GitHub Pages.
@@ -48,12 +51,13 @@ The repository maintainer has made these decisions. They are constraints of this
 - Out of scope: Publication of content outside `docs/`, for example the source code.
 - Out of scope: A custom visual theme, a search index, or a version selector for the website.
 - Out of scope: A status or a phase field in any file.
+- Out of scope: A deployment message after a failed build or deployment.
 
 ## Domain
 
 | Subdomain | Type | Context | Actors | Events |
 | --- | --- | --- | --- | --- |
-| Repository factory | Core | context-factory | Repository maintainer, reader, GitHub Actions | Documentation site enabled, documentation site published |
+| Repository factory | Core | context-factory | Repository maintainer, reader, GitHub Actions | Documentation site enabled, documentation site deployed, deployment notification sent |
 
 The feature touches the aggregate [Repository blueprint](../../../domain/context-factory/agg-repository-blueprint.md).
 The documentation site is one more composition that the blueprint activates and checks.
@@ -64,7 +68,7 @@ The documentation site is one more composition that the blueprint activates and 
 | --- | --- | --- |
 | [req-browsable-docs](req-browsable-docs.md) | The website must render the whole `docs/` tree, with a `README.md` as the index page of its folder and with working relative links. | Must |
 | [req-github-pages-publishing](req-github-pages-publishing.md) | A generated workflow must publish the website to GitHub Pages on each push to the default branch. | Must |
-| [req-factory-owned-site](req-factory-owned-site.md) | The factory must own the site project, its checks, and its dependency versions; a project configures only a title, a site URL, and a base URL. | Must |
+| [req-factory-owned-site](req-factory-owned-site.md) | The factory must own the site project, its checks, dependency versions, and optional deployment notifier. | Must |
 
 ## Acceptance
 
@@ -74,5 +78,6 @@ a title, a site URL, and a base URL. The generated repository contains the site 
 `apps/documentation/` and a GitHub Actions workflow. After the repository owner sets the Pages
 source to "GitHub Actions" one time, a push to the default branch publishes the website. A reader
 opens the site URL and finds each page of `docs/` except the templates. Each relative link
-between two pages opens the correct page. A project that enables the option without the model,
-the architecture, or the ci-cd provider gets a clear evaluation error.
+between two pages opens the correct page. An enabled notification sends one message after the
+deployment. A project that enables the option without the model, architecture, or ci-cd provider
+gets a clear evaluation error.

@@ -1,6 +1,7 @@
 let
   optionUtils = {
     mkBoolOpt = inputs: inputs;
+    mkEnumOpt = inputs: inputs;
     mkStrOpt = inputs: inputs;
   };
 
@@ -29,6 +30,8 @@ let
       title ? "Documentation",
       url ? "https://example.github.io",
       baseUrl ? "/repo/",
+      notificationProvider ? "unset",
+      notificationSecret ? "DOCS_SITE_NOTIFICATION_WEBHOOK",
     }:
     import ../default.nix {
       inherit lib;
@@ -42,6 +45,10 @@ let
         composition.artifact-driven.docs-site = {
           inherit enable title url;
           base-url = baseUrl;
+          notification = {
+            provider = notificationProvider;
+            webhook-secret = notificationSecret;
+          };
         };
       };
       namespace = "factory";
@@ -50,6 +57,15 @@ let
   evalModule = args: (moduleFor args).config;
 
   on = evalModule { enable = true; };
+  googleChat = evalModule {
+    enable = true;
+    notificationProvider = "google-chat";
+  };
+  slack = evalModule {
+    enable = true;
+    notificationProvider = "slack";
+    notificationSecret = "TEAM_WEBHOOK";
+  };
   off = evalModule { };
   single = evalModule {
     enable = true;
@@ -70,6 +86,11 @@ let
   badBaseUrl = evalModule {
     enable = true;
     baseUrl = "repo";
+  };
+  invalidNotificationSecret = evalModule {
+    enable = true;
+    notificationProvider = "slack";
+    notificationSecret = "invalid-secret";
   };
   invalidSetups = [
     single
@@ -95,9 +116,16 @@ let
     "${site}/README.md"
   ];
   allFiles = copyFiles ++ seedFiles;
-  sourced = builtins.filter (name: name != "${site}/site.json") allFiles;
+  sourced = builtins.filter (
+    name: name != "${site}/site.json" && name != ".github/workflows/docs-site.yml"
+  ) allFiles;
   fileOf = name: on.files.${name};
-  textOf = name: builtins.readFile (fileOf name).source;
+  textOf =
+    name:
+    let
+      file = fileOf name;
+    in
+    if file ? text then file.text else builtins.readFile file.source;
   matches = pattern: text: builtins.match ".*${pattern}.*" text != null;
   assertionsPass = cfg: builtins.all (a: a.assertion) (cfg.assertions or [ ]);
   pkg = builtins.fromJSON (textOf "${site}/package.json");
@@ -110,11 +138,12 @@ let
   copyModes =
     builtins.all (name: (fileOf name).copyMode == "copy") copyFiles
     && builtins.all (name: (fileOf name).copyMode == "seed") seedFiles;
-  siteJsonRoundTrip = builtins.fromJSON (fileOf "${site}/site.json").text == {
-    title = "Documentation";
-    url = "https://example.github.io";
-    baseUrl = "/repo/";
-  };
+  siteJsonRoundTrip =
+    builtins.fromJSON (fileOf "${site}/site.json").text == {
+      title = "Documentation";
+      url = "https://example.github.io";
+      baseUrl = "/repo/";
+    };
   packageJsonPinned =
     pkg.private == true
     && pkg.scripts.build == "docusaurus build"
@@ -147,6 +176,45 @@ let
       "pages: write"
       "id-token: write"
     ];
+  notificationFile = ".github/docs-site/notify.py";
+  notificationOptionsMatch =
+    let
+      module = moduleFor { };
+      options = module.options.factory.composition.artifact-driven.docs-site.notification;
+    in
+    options.provider.default == "unset"
+    &&
+      options.provider.values == [
+        "unset"
+        "google-chat"
+        "slack"
+      ]
+    && options.webhook-secret.default == "DOCS_SITE_NOTIFICATION_WEBHOOK";
+  notificationFilesMatch =
+    !(builtins.hasAttr notificationFile on.files)
+    && builtins.hasAttr notificationFile googleChat.files
+    && googleChat.files.${notificationFile}.source == ../_assets/.github/docs-site/notify.py
+    && googleChat.files.${notificationFile}.copyMode == "copy"
+    && builtins.hasAttr notificationFile slack.files;
+  notificationWorkflowsMatch =
+    let
+      disabled = on.files.".github/workflows/docs-site.yml".text;
+      google = googleChat.files.".github/workflows/docs-site.yml".text;
+      slackText = slack.files.".github/workflows/docs-site.yml".text;
+    in
+    !matches "Notify the team about the deployment" disabled
+    && matches "actions/deploy-pages@v4.*Check out the notification code.*[.]github/docs-site/notify[.]py" google
+    && matches "id-token: write.*contents: read" google
+    && matches "persist-credentials: false" google
+    && matches "DOCS_SITE_NOTIFICATION_PROVIDER: google-chat" google
+    && matches "secrets[.]DOCS_SITE_NOTIFICATION_WEBHOOK" google
+    && matches "DOCS_SITE_DEPLOYMENT_URL:.*steps[.]deployment[.]outputs[.]page_url" google
+    && matches "DOCS_SITE_REPOSITORY:.*github[.]repository" google
+    && matches "DOCS_SITE_REF_NAME:.*github[.]ref_name" google
+    && matches "DOCS_SITE_COMMIT_SHA:.*github[.]sha" google
+    && matches "DOCS_SITE_RUN_URL:.*github[.]server_url.*github[.]run_id" google
+    && matches "DOCS_SITE_NOTIFICATION_PROVIDER: slack" slackText
+    && matches "secrets[.]TEAM_WEBHOOK" slackText;
   gitignoreMatches =
     let
       text = textOf "${site}/.gitignore";
@@ -163,8 +231,14 @@ let
     builtins.all (pattern: matches pattern text) [
       "npm run start"
       "GitHub Actions"
+      "docs-site.notification"
+      "DOCS_SITE_NOTIFICATION_WEBHOOK"
+      "Google Chat incoming webhooks"
+      "Slack incoming webhooks"
     ];
   onAssertionsPass = assertionsPass on;
+  notificationAssertionsPass = assertionsPass googleChat && assertionsPass slack;
+  invalidNotificationSecretRejected = !assertionsPass invalidNotificationSecret;
   offEmitsNothing = (off.files or { }) == { } && (off.assertions or [ ]) == [ ];
   invalidSetupsRejected = builtins.all (cfg: !assertionsPass cfg) invalidSetups;
 in
@@ -176,9 +250,14 @@ assert packageJsonPinned;
 assert lockfilePinned;
 assert configMatches;
 assert workflowMatches;
+assert notificationOptionsMatch;
+assert notificationFilesMatch;
+assert notificationWorkflowsMatch;
 assert gitignoreMatches;
 assert wikiPageMatches;
 assert onAssertionsPass;
+assert notificationAssertionsPass;
+assert invalidNotificationSecretRejected;
 assert offEmitsNothing;
 assert invalidSetupsRejected;
 {
@@ -191,9 +270,14 @@ assert invalidSetupsRejected;
     lockfilePinned
     configMatches
     workflowMatches
+    notificationOptionsMatch
+    notificationFilesMatch
+    notificationWorkflowsMatch
     gitignoreMatches
     wikiPageMatches
     onAssertionsPass
+    notificationAssertionsPass
+    invalidNotificationSecretRejected
     offEmitsNothing
     invalidSetupsRejected
     ;
