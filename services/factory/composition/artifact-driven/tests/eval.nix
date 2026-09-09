@@ -295,6 +295,7 @@ let
     ".github/artifact-issues/sync.py"
     ".github/artifact-issues/config.json"
     "docs/wiki/documentation/artifact-driven/project-issues.md"
+    "docs/wiki/documentation/artifact-driven/project-issue-credentials.md"
   ];
   hasProjectIssueFiles = cfg: builtins.all (name: builtins.hasAttr name cfg.files) projectIssueFiles;
   assertionsPass = cfg: builtins.all (assertion: assertion.assertion) (cfg.assertions or [ ]);
@@ -320,6 +321,16 @@ let
     &&
       builtins.match ".*TRELLO_API_KEY:.*TRELLO_API_KEY.*"
         trelloOn.files.".github/workflows/accepted-artifact-issues.yml".text != null;
+  credentialGuide =
+    githubOn.files."docs/wiki/documentation/artifact-driven/project-issue-credentials.md";
+  credentialGuideMatches =
+    credentialGuide.copyMode == "copy"
+    && credentialGuide.source == ../_assets/project-issues/project-issue-credentials.md
+    && builtins.pathExists credentialGuide.source
+    &&
+      builtins.match ".*`repo` and `project` scopes.*" (builtins.readFile credentialGuide.source) != null
+    &&
+      builtins.match ".*`read` and `write` scopes.*" (builtins.readFile credentialGuide.source) != null;
 
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
@@ -348,6 +359,7 @@ assert adapterSelectionPassive;
 assert invalidSetupsRejected;
 assert providerConfigMatches;
 assert workflowsUseSelectedSecrets;
+assert credentialGuideMatches;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
 {
@@ -366,6 +378,7 @@ assert providerDoesNotOwnPolicy;
     invalidSetupsRejected
     providerConfigMatches
     workflowsUseSelectedSecrets
+    credentialGuideMatches
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
     ;

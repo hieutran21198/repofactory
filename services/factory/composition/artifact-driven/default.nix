@@ -260,6 +260,10 @@ in
             source = ./_assets/project-issues/project-issues.md;
             copyMode = "copy";
           };
+          "docs/wiki/documentation/artifact-driven/project-issue-credentials.md" = {
+            source = ./_assets/project-issues/project-issue-credentials.md;
+            copyMode = "copy";
+          };
         };
       })
     ];

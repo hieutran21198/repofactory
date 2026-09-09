@@ -45,23 +45,26 @@ status of an artifact type. Adapter selection alone does not enable this integra
 
 ## GitHub Projects setup
 
+Use the [provider credential guide](project-issue-credentials.md) to create and store the token.
+
 1. Make a personal or organization project.
 2. Add one single-select field named `Status`.
 3. Add every configured artifact status to the field.
-4. Make a classic personal access token with `repo` and `project` scopes.
-5. Add the token with the configured repository secret name.
+4. Add the token with the configured repository secret name.
 
 The workflow makes repository issues. It connects child issues with the GitHub sub-issues API.
 
 ## Trello setup
+
+Use the [provider credential guide](project-issue-credentials.md) to create and store the API key
+and user token.
 
 1. Make one board.
 2. Make one open list for every configured artifact status.
 3. Add a text custom field named `Artifact path`.
 4. Add a text custom field named `Artifact type`.
 5. Add a text custom field named `Parent artifact`.
-6. Add the Trello API key with the configured repository secret name.
-7. Add the Trello token with the configured repository secret name.
+6. Add the API key and user token with the configured repository secret names.
 
 The workflow adds child card URLs to a `Children` checklist on the parent card.
 
