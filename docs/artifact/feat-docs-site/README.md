@@ -1,6 +1,6 @@
 # Feature: Documentation site
 
-**Current version:** 4.0.0
+**Current version:** 4.0.1
 
 ## Summary
 
@@ -12,9 +12,9 @@ project generate and publish static assets without replacing factory-owned files
 
 ## Current artifacts
 
-- [Requirements](versions/4.0.0/requirements/README.md)
-- [Specifications](versions/4.0.0/specifications/README.md)
-- [Decisions](versions/4.0.0/decisions/)
+- [Requirements](versions/4.0.1/requirements/README.md)
+- [Specifications](versions/4.0.1/specifications/README.md)
+- [Decisions](versions/4.0.1/decisions/)
 
 ## Versions
 
@@ -24,10 +24,11 @@ project generate and publish static assets without replacing factory-owned files
 | 2.0.0 | [Send documentation site deployment notifications](changes/change-deployment-notifications/README.md) | Requirements | 443894f..a8c6022 |
 | 3.0.0 | [Use multiple deployment notification providers](changes/change-multi-provider-deployment-notifications/README.md) | Requirements | 555ec58 |
 | 4.0.0 | [Add generated asset extension points](changes/change-generated-asset-extension-points/README.md) | Requirements | 83da981..29d560b |
+| 4.0.1 | [Fix run-only workflow steps](changes/change-run-only-workflow-step/README.md) | Correction | eed7a31..c5654fa |
 
-Versions 3.0.0 and 4.0.0 have folders in `versions/`. The versions before 3.0.0 were folded into
-3.0.0 when the artifacts moved to the changes and versions layout. Read the change of each
-version for the artifacts of that step.
+Versions from 3.0.0 have folders in `versions/`. The earlier versions were folded into 3.0.0 when
+the artifacts moved to the changes and versions layout. Read each change for the artifacts of that
+step.
 
 ## Artifacts
 
