@@ -17,3 +17,5 @@ one layout that keeps each change and gives the full state of the feature at eac
 ## Artifacts
 
 - [Requirements](requirements/README.md)
+- [Specifications](specifications/README.md)
+- [Decisions](decisions/)
