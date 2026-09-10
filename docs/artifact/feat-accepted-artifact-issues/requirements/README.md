@@ -10,7 +10,7 @@ stay the source of truth, and a rejected proposal must not make project data.
 - In scope: Create and update project issues after an artifact pull request merges.
 - In scope: Show the artifact hierarchy in GitHub Projects or Trello.
 - In scope: Let each artifact type select its first project status.
-- In scope: Optionally notify one Google Chat space or Slack channel after synchronization.
+- In scope: Optionally notify one or more Google Chat, Slack, and Telegram providers after synchronization.
 - Out of scope: Create project issues before a pull request merges.
 - Out of scope: Put provider URLs in artifact files.
 - Out of scope: Make or repair an external project board.

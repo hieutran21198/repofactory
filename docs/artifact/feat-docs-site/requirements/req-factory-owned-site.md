@@ -24,7 +24,7 @@ Evaluation must stop with a message when the option is on without one of them.
 - Given two projects with the option on and the same factory version, when the repository maintainers enter their shells, then both repositories use the same dependency versions of the site tooling.
 - Given a new factory version with new dependency versions, when the repository maintainer updates the factory, then the repository gets the new versions without a change to the project configuration.
 - Given no notification provider, when the repository maintainer enters the shell, then the repository contains no deployment notifier.
-- Given Google Chat or Slack, when the repository maintainer enters the shell, then the factory generates the deployment notifier and configured workflow.
+- Given one or more Google Chat, Slack, or Telegram providers, when the repository maintainer enters the shell, then the factory generates the deployment notifier and configured workflow.
 
 ## Notes
 

@@ -11,7 +11,7 @@ let
     provider: tokenSecret:
     let
       notification = config.${namespace}.composition.artifact-driven.project-issues.notification;
-      notificationEnabled = notification.provider != "unset";
+      notificationEnabled = notification.uses != [ ];
       providerSecrets =
         if provider == "github-projects" then
           "PROJECT_TOKEN: \${{ secrets.${tokenSecret} }}"
@@ -21,7 +21,11 @@ let
           in
           "TRELLO_API_KEY: \${{ secrets.${trello.api-key-secret} }}\n          TRELLO_TOKEN: \${{ secrets.${trello.token-secret} }}";
       resultEnvironment = lib.optionalString notificationEnabled "\n          ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json";
-      notificationStep = lib.optionalString notificationEnabled "\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3 .github/artifact-issues/notify.py\n        env:\n          ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json\n          ARTIFACT_NOTIFICATION_PROVIDER: ${notification.provider}\n          ARTIFACT_NOTIFICATION_WEBHOOK: \${{ secrets.${notification.webhook-secret} }}";
+      notificationSecrets =
+        lib.optionalString (builtins.elem "google-chat" notification.uses) "\n          ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: \${{ secrets.${notification.google-chat.webhook-secret} }}"
+        + lib.optionalString (builtins.elem "slack" notification.uses) "\n          ARTIFACT_NOTIFICATION_SLACK_WEBHOOK: \${{ secrets.${notification.slack.webhook-secret} }}"
+        + lib.optionalString (builtins.elem "telegram" notification.uses) "\n          ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN: \${{ secrets.${notification.telegram.token-secret} }}\n          ARTIFACT_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}";
+      notificationStep = lib.optionalString notificationEnabled "\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3 .github/artifact-issues/notify.py\n        env:\n          ARTIFACT_ISSUES_RESULT: \${{ runner.temp }}/accepted-artifacts.json\n          ARTIFACT_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'${notificationSecrets}";
     in
     ''
       name: Accepted artifact issues
@@ -77,18 +81,32 @@ in
       withdrawn = _utils.mkStrOpt { default = "Withdrawn"; };
     };
     notification = {
-      provider = _utils.mkEnumOpt {
-        values = [
-          "unset"
+      uses = _utils.mkListOpt {
+        ofType = lib.types.enum [
           "google-chat"
           "slack"
+          "telegram"
         ];
-        default = "unset";
-        description = "The team webhook provider for accepted artifact summaries";
+        default = [ ];
+        description = "The team providers for accepted artifact summaries";
       };
-      webhook-secret = _utils.mkStrOpt {
-        default = "ARTIFACT_NOTIFICATION_WEBHOOK";
-        description = "The GitHub Actions secret that contains the team webhook URL";
+      google-chat.webhook-secret = _utils.mkStrOpt {
+        default = "ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK";
+        description = "The GitHub Actions secret that contains the Google Chat webhook URL";
+      };
+      slack.webhook-secret = _utils.mkStrOpt {
+        default = "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK";
+        description = "The GitHub Actions secret that contains the Slack webhook URL";
+      };
+      telegram = {
+        token-secret = _utils.mkStrOpt {
+          default = "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN";
+          description = "The GitHub Actions secret that contains the Telegram bot token";
+        };
+        chat-id = _utils.mkStrOpt {
+          default = "";
+          description = "The Telegram chat ID that receives accepted artifact summaries";
+        };
       };
     };
   };
@@ -106,7 +124,7 @@ in
       projectProvider = project-management.provider.use;
       projectIssues = config.${namespace}.composition.artifact-driven.project-issues;
       artifactIssues = projectIssues.enable;
-      notificationEnabled = projectIssues.notification.provider != "unset";
+      notificationEnabled = projectIssues.notification.uses != [ ];
       githubProjects = project-management.provider.github-projects;
       trello = project-management.provider.trello;
       projectConfig = {
@@ -146,9 +164,41 @@ in
           message = "${namespace}.composition.artifact-driven.project-issues.artifact-status.${name} must not be empty";
         }) (builtins.attrNames projectIssues.artifact-status)
         ++ lib.optional notificationEnabled {
+          assertion = builtins.all (
+            use:
+            builtins.elem use [
+              "google-chat"
+              "slack"
+              "telegram"
+            ]
+          ) projectIssues.notification.uses;
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.uses must contain only supported providers";
+        }
+        ++ lib.optional notificationEnabled {
           assertion =
-            builtins.match "[A-Za-z_][A-Za-z0-9_]*" projectIssues.notification.webhook-secret != null;
-          message = "${namespace}.composition.artifact-driven.project-issues.notification.webhook-secret must be a GitHub secret name";
+            builtins.length projectIssues.notification.uses
+            == builtins.length (lib.unique projectIssues.notification.uses);
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.uses must not contain a provider more than once";
+        }
+        ++ lib.optional (builtins.elem "google-chat" projectIssues.notification.uses) {
+          assertion =
+            builtins.match "[A-Za-z_][A-Za-z0-9_]*" projectIssues.notification.google-chat.webhook-secret
+            != null;
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.google-chat.webhook-secret must be a GitHub secret name";
+        }
+        ++ lib.optional (builtins.elem "slack" projectIssues.notification.uses) {
+          assertion =
+            builtins.match "[A-Za-z_][A-Za-z0-9_]*" projectIssues.notification.slack.webhook-secret != null;
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.slack.webhook-secret must be a GitHub secret name";
+        }
+        ++ lib.optional (builtins.elem "telegram" projectIssues.notification.uses) {
+          assertion =
+            builtins.match "[A-Za-z_][A-Za-z0-9_]*" projectIssues.notification.telegram.token-secret != null;
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.telegram.token-secret must be a GitHub secret name";
+        }
+        ++ lib.optional (builtins.elem "telegram" projectIssues.notification.uses) {
+          assertion = projectIssues.notification.telegram.chat-id != "";
+          message = "${namespace}.composition.artifact-driven.project-issues.notification.telegram.chat-id must not be empty";
         }
         ++ (
           if projectProvider == "github-projects" then

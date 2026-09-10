@@ -9,11 +9,11 @@ let
   workflow =
     notification:
     let
-      notificationEnabled = notification.provider != "unset";
+      notificationEnabled = notification.uses != [ ];
       notificationPermission = if notificationEnabled then "\n      contents: read" else "";
       notificationSteps =
         if notificationEnabled then
-          "\n      - name: Check out the notification code\n        uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n      - name: Notify the team about the deployment\n        run: python3 .github/docs-site/notify.py\n        env:\n          DOCS_SITE_NOTIFICATION_PROVIDER: ${notification.provider}\n          DOCS_SITE_NOTIFICATION_WEBHOOK: \${{ secrets.${notification.webhook-secret} }}\n          DOCS_SITE_DEPLOYMENT_URL: \${{ steps.deployment.outputs.page_url }}\n          DOCS_SITE_REPOSITORY: \${{ github.repository }}\n          DOCS_SITE_REF_NAME: \${{ github.ref_name }}\n          DOCS_SITE_COMMIT_SHA: \${{ github.sha }}\n          DOCS_SITE_RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}\n"
+          "\n      - name: Check out the notification code\n        uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n      - name: Notify the team about the deployment\n        run: python3 .github/docs-site/notify.py\n        env:\n          DOCS_SITE_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'${lib.optionalString (builtins.elem "google-chat" notification.uses) "\n          DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: \${{ secrets.${notification.google-chat.webhook-secret} }}"}${lib.optionalString (builtins.elem "slack" notification.uses) "\n          DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK: \${{ secrets.${notification.slack.webhook-secret} }}"}${lib.optionalString (builtins.elem "telegram" notification.uses) "\n          DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN: \${{ secrets.${notification.telegram.token-secret} }}\n          DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}"}\n          DOCS_SITE_DEPLOYMENT_URL: \${{ steps.deployment.outputs.page_url }}\n          DOCS_SITE_REPOSITORY: \${{ github.repository }}\n          DOCS_SITE_REF_NAME: \${{ github.ref_name }}\n          DOCS_SITE_COMMIT_SHA: \${{ github.sha }}\n          DOCS_SITE_RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}\n"
         else
           "\n";
     in
@@ -93,18 +93,32 @@ in
       description = "The path of the website under the origin, for example /<repo>/ for a project site. It starts and ends with a slash.";
     };
     notification = {
-      provider = _utils.mkEnumOpt {
-        values = [
-          "unset"
+      uses = _utils.mkListOpt {
+        ofType = lib.types.enum [
           "google-chat"
           "slack"
+          "telegram"
         ];
-        default = "unset";
-        description = "The team webhook provider for documentation site deployment messages";
+        default = [ ];
+        description = "The team providers for documentation site deployment messages";
       };
-      webhook-secret = _utils.mkStrOpt {
-        default = "DOCS_SITE_NOTIFICATION_WEBHOOK";
-        description = "The GitHub Actions secret that contains the team webhook URL";
+      google-chat.webhook-secret = _utils.mkStrOpt {
+        default = "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK";
+        description = "The GitHub Actions secret that contains the Google Chat webhook URL";
+      };
+      slack.webhook-secret = _utils.mkStrOpt {
+        default = "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK";
+        description = "The GitHub Actions secret that contains the Slack webhook URL";
+      };
+      telegram = {
+        token-secret = _utils.mkStrOpt {
+          default = "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN";
+          description = "The GitHub Actions secret that contains the Telegram bot token";
+        };
+        chat-id = _utils.mkStrOpt {
+          default = "";
+          description = "The Telegram chat ID that receives documentation site deployment messages";
+        };
       };
     };
   };
@@ -113,7 +127,7 @@ in
     let
       docsSite = config.${namespace}.composition.artifact-driven.docs-site;
       inherit (config.${namespace}.domain) repo-arch documentation ci-cd;
-      notificationEnabled = docsSite.notification.provider != "unset";
+      notificationEnabled = docsSite.notification.uses != [ ];
       site = "apps/documentation";
     in
     lib.mkIf docsSite.enable {
@@ -143,17 +157,42 @@ in
           message = "${namespace}.composition.artifact-driven.docs-site.title must not be empty";
         }
       ]
-      ++ (
-        if notificationEnabled then
-          [
-            {
-              assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" docsSite.notification.webhook-secret != null;
-              message = "${namespace}.composition.artifact-driven.docs-site.notification.webhook-secret must be a GitHub secret name";
-            }
+      ++ lib.optional notificationEnabled {
+        assertion = builtins.all (
+          use:
+          builtins.elem use [
+            "google-chat"
+            "slack"
+            "telegram"
           ]
-        else
-          [ ]
-      );
+        ) docsSite.notification.uses;
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.uses must contain only supported providers";
+      }
+      ++ lib.optional notificationEnabled {
+        assertion =
+          builtins.length docsSite.notification.uses
+          == builtins.length (lib.unique docsSite.notification.uses);
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.uses must not contain a provider more than once";
+      }
+      ++ lib.optional (builtins.elem "google-chat" docsSite.notification.uses) {
+        assertion =
+          builtins.match "[A-Za-z_][A-Za-z0-9_]*" docsSite.notification.google-chat.webhook-secret != null;
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.google-chat.webhook-secret must be a GitHub secret name";
+      }
+      ++ lib.optional (builtins.elem "slack" docsSite.notification.uses) {
+        assertion =
+          builtins.match "[A-Za-z_][A-Za-z0-9_]*" docsSite.notification.slack.webhook-secret != null;
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.slack.webhook-secret must be a GitHub secret name";
+      }
+      ++ lib.optional (builtins.elem "telegram" docsSite.notification.uses) {
+        assertion =
+          builtins.match "[A-Za-z_][A-Za-z0-9_]*" docsSite.notification.telegram.token-secret != null;
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.telegram.token-secret must be a GitHub secret name";
+      }
+      ++ lib.optional (builtins.elem "telegram" docsSite.notification.uses) {
+        assertion = docsSite.notification.telegram.chat-id != "";
+        message = "${namespace}.composition.artifact-driven.docs-site.notification.telegram.chat-id must not be empty";
+      };
 
       files = {
         "${site}/package.json" = {

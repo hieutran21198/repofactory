@@ -24,7 +24,7 @@ index page, and each route ends with a slash, so a link to a bare folder opens t
 The factory pins the dependency tree with `package.json` and `package-lock.json` in copy mode.
 A generated GitHub Actions workflow builds the site with `npm ci` and `npm run build`. It publishes
 the build to GitHub Pages with the Pages actions. An optional Python notifier sends one deployment
-message to Google Chat or Slack after the deployment succeeds.
+message to each selected Google Chat, Slack, and Telegram provider after the deployment succeeds.
 
 A wiki page, `docs/wiki/documentation/artifact-driven/docs-site.md`, tells the repository
 maintainer how to run the site locally and how to set the Pages source. It also gives the optional

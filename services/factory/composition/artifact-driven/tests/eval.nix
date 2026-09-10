@@ -4,6 +4,7 @@ let
     mkStrOpt = inputs: inputs;
     mkIntOpt = inputs: inputs;
     mkEnumOpt = inputs: inputs;
+    mkListOpt = inputs: inputs;
   };
 
   lib = {
@@ -21,6 +22,11 @@ let
     optionalString = condition: string: if condition then string else "";
     optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
+    unique =
+      list:
+      builtins.foldl' (
+        items: item: if builtins.elem item items then items else items ++ [ item ]
+      ) [ ] list;
     foldl' = builtins.foldl';
     nameValuePair = name: value: { inherit name value; };
     mapAttrs' = f: set: builtins.listToAttrs (map (name: f name set.${name}) (builtins.attrNames set));
@@ -71,8 +77,11 @@ let
       trelloImplementationBoard ? "",
       trelloApiKeySecret ? "TRELLO_API_KEY",
       trelloTokenSecret ? "TRELLO_TOKEN",
-      notificationProvider ? "unset",
-      notificationSecret ? "ARTIFACT_NOTIFICATION_WEBHOOK",
+      notificationUses ? [ ],
+      notificationGoogleChatSecret ? "ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK",
+      notificationSlackSecret ? "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK",
+      notificationTelegramTokenSecret ? "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN",
+      notificationTelegramChatId ? "",
     }:
     import ../default.nix {
       inherit lib;
@@ -103,8 +112,13 @@ let
           inherit enable;
           artifact-status = statuses;
           notification = {
-            provider = notificationProvider;
-            webhook-secret = notificationSecret;
+            uses = notificationUses;
+            google-chat.webhook-secret = notificationGoogleChatSecret;
+            slack.webhook-secret = notificationSlackSecret;
+            telegram = {
+              token-secret = notificationTelegramTokenSecret;
+              chat-id = notificationTelegramChatId;
+            };
           };
         };
       };
@@ -144,14 +158,25 @@ let
     ciProvider = "github-actions";
     projectProvider = "github-projects";
     enable = true;
-    notificationProvider = "google-chat";
+    notificationUses = [ "google-chat" ];
   };
   slackOn = evalModule {
     ciProvider = "github-actions";
     projectProvider = "trello";
     enable = true;
-    notificationProvider = "slack";
-    notificationSecret = "TEAM_WEBHOOK";
+    notificationUses = [ "slack" ];
+    notificationSlackSecret = "TEAM_SLACK_WEBHOOK";
+  };
+  multiProviderOn = evalModule {
+    ciProvider = "github-actions";
+    projectProvider = "github-projects";
+    enable = true;
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
   };
   adapterOnly = evalModule {
     projectProvider = "github-projects";
@@ -230,8 +255,8 @@ let
       ciProvider = "github-actions";
       projectProvider = "github-projects";
       enable = true;
-      notificationProvider = "slack";
-      notificationSecret = "invalid-secret";
+      notificationUses = [ "slack" ];
+      notificationSlackSecret = "invalid-secret";
     })
   ];
 
@@ -385,21 +410,32 @@ let
     && builtins.hasAttr notificationFile slackOn.files;
   googleChatWorkflow = googleChatOn.files.".github/workflows/accepted-artifact-issues.yml".text;
   slackWorkflow = slackOn.files.".github/workflows/accepted-artifact-issues.yml".text;
+  multiProviderWorkflow = multiProviderOn.files.".github/workflows/accepted-artifact-issues.yml".text;
   notificationWorkflowsMatch =
     builtins.match ".*ARTIFACT_ISSUES_RESULT:.*runner.temp.*/accepted-artifacts.json.*" googleChatWorkflow
     != null
-    && builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER: google-chat.*" googleChatWorkflow != null
+    && builtins.match ".*ARTIFACT_NOTIFICATION_USES:.*google-chat.*" googleChatWorkflow != null
     &&
-      builtins.match ".*ARTIFACT_NOTIFICATION_WEBHOOK:.*ARTIFACT_NOTIFICATION_WEBHOOK.*" googleChatWorkflow
+      builtins.match ".*ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK:.*ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK.*" googleChatWorkflow
       != null
-    && builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER: slack.*" slackWorkflow != null
-    && builtins.match ".*ARTIFACT_NOTIFICATION_WEBHOOK:.*TEAM_WEBHOOK.*" slackWorkflow != null
+    && builtins.match ".*ARTIFACT_NOTIFICATION_USES:.*slack.*" slackWorkflow != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_SLACK_WEBHOOK:.*TEAM_SLACK_WEBHOOK.*" slackWorkflow != null
     && builtins.match ".*if: github.event_name == 'pull_request_target'.*" slackWorkflow != null
     &&
-      builtins.match ".*ARTIFACT_NOTIFICATION_PROVIDER.*"
+      builtins.match ".*ARTIFACT_NOTIFICATION_USES.*"
         githubOn.files.".github/workflows/accepted-artifact-issues.yml".text == null;
+  multiProviderWorkflowMatches =
+    builtins.match ".*ARTIFACT_NOTIFICATION_USES:.*google-chat.*slack.*telegram.*" multiProviderWorkflow
+    != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK.*ARTIFACT_NOTIFICATION_SLACK_WEBHOOK.*ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN.*ARTIFACT_NOTIFICATION_TELEGRAM_CHAT_ID: \"-100123\".*" multiProviderWorkflow
+      != null
+    &&
+      builtins.match ".*Notify the team about accepted artifacts.*Notify the team about accepted artifacts.*" multiProviderWorkflow
+      == null;
   notificationWorkflowIndentation =
-    builtins.match ".*\n          ARTIFACT_ISSUES_RESULT:.*\n\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3.*\n        env:\n          ARTIFACT_ISSUES_RESULT:.*\n          ARTIFACT_NOTIFICATION_PROVIDER: slack.*" slackWorkflow
+    builtins.match ".*\n          ARTIFACT_ISSUES_RESULT:.*\n\n      - name: Notify the team about accepted artifacts\n        if: github.event_name == 'pull_request_target'\n        run: python3.*\n        env:\n          ARTIFACT_ISSUES_RESULT:.*\n          ARTIFACT_NOTIFICATION_USES:.*" slackWorkflow
     != null;
   credentialGuide =
     githubOn.files."docs/wiki/documentation/artifact-driven/project-issue-credentials.md";
@@ -412,7 +448,7 @@ let
     &&
       builtins.match ".*`read` and `write` scopes.*" (builtins.readFile credentialGuide.source) != null;
   notificationGuidesMatch =
-    builtins.match ".*notification.provider.*google-chat.*slack.*" (
+    builtins.match ".*notification.uses.*google-chat.*slack.*telegram.*" (
       builtins.readFile githubOn.files."docs/wiki/documentation/artifact-driven/project-issues.md".source
     ) != null
     &&
@@ -495,11 +531,11 @@ let
       compositionModule.options.factory.composition.artifact-driven.project-issues.artifact-status.task.default
       == "Ready"
     &&
-      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.provider.default
-      == "unset"
+      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.uses.default
+      == [ ]
     &&
-      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.webhook-secret.default
-      == "ARTIFACT_NOTIFICATION_WEBHOOK";
+      compositionModule.options.factory.composition.artifact-driven.project-issues.notification.telegram.token-secret.default
+      == "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN";
   providerDoesNotOwnPolicy =
     !(builtins.hasAttr "artifact-status" providerModule.options.factory.domain.project-management);
 in
@@ -520,6 +556,7 @@ assert workflowsUseSelectedSecrets;
 assert workflowsCanWritePullRequestComments;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
+assert multiProviderWorkflowMatches;
 assert notificationWorkflowIndentation;
 assert credentialGuideMatches;
 assert notificationGuidesMatch;
@@ -555,6 +592,7 @@ assert dddReviewContent;
     workflowsCanWritePullRequestComments
     notificationFilesMatch
     notificationWorkflowsMatch
+    multiProviderWorkflowMatches
     notificationWorkflowIndentation
     credentialGuideMatches
     notificationGuidesMatch

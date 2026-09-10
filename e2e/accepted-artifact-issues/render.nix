@@ -5,7 +5,7 @@
   trelloBoard ? "unused",
   trelloImplementationBoard ? "",
   notificationProvider ? "unset",
-  notificationSecret ? "ARTIFACT_NOTIFICATION_WEBHOOK",
+  notificationSecret ? "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK",
 }:
 let
   optionUtils = {
@@ -13,6 +13,7 @@ let
     mkStrOpt = inputs: inputs;
     mkIntOpt = inputs: inputs;
     mkEnumOpt = inputs: inputs;
+    mkListOpt = inputs: inputs;
   };
 
   lib = {
@@ -94,8 +95,13 @@ let
         enable = true;
         artifact-status = statuses;
         notification = {
-          provider = notificationProvider;
-          webhook-secret = notificationSecret;
+          uses = if notificationProvider == "unset" then [ ] else [ notificationProvider ];
+          google-chat.webhook-secret = notificationSecret;
+          slack.webhook-secret = notificationSecret;
+          telegram = {
+            token-secret = notificationSecret;
+            chat-id = "-100123";
+          };
         };
       };
     };

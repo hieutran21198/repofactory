@@ -29,8 +29,8 @@ The repository maintainer has made these decisions. They are constraints of this
   architecture, and the ci-cd provider `github-actions`. Evaluation must stop with a clear
   message when a project enables the feature without one of them.
 - The factory pins the dependency versions of the site tooling. A project does not pin them.
-- A project can optionally send a deployment message to Google Chat or Slack. The message follows
-  a successful push or manual deployment.
+- A project can optionally send a deployment message to one or more Google Chat, Slack, and Telegram
+  providers. The message follows a successful push or manual deployment.
 
 ## Scope
 
@@ -43,7 +43,7 @@ The repository maintainer has made these decisions. They are constraints of this
 - In scope: An evaluation error when the option is on without the required model, architecture,
   or ci-cd provider.
 - In scope: Dependency versions of the site tooling that the factory pins.
-- In scope: An optional Google Chat or Slack message after a successful deployment.
+- In scope: Optional Google Chat, Slack, and Telegram messages after a successful deployment.
 - Out of scope: The single repository architecture.
 - Out of scope: A ci-cd provider other than `github-actions`.
 - Out of scope: A publication target other than GitHub Pages.

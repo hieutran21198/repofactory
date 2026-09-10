@@ -208,7 +208,7 @@ class RendererTest(unittest.TestCase):
             "trello",
             {"trello_board": {"id": "board"}},
             notification_provider="slack",
-            notification_secret="TEAM_WEBHOOK",
+            notification_secret="TEAM_SLACK_WEBHOOK",
         )
 
         self.assertIn(".github/artifact-issues/notify.py", files)
@@ -220,8 +220,8 @@ class RendererTest(unittest.TestCase):
         run: python3 .github/artifact-issues/notify.py
         env:
           ARTIFACT_ISSUES_RESULT: ${{ runner.temp }}/accepted-artifacts.json
-          ARTIFACT_NOTIFICATION_PROVIDER: slack
-          ARTIFACT_NOTIFICATION_WEBHOOK: ${{ secrets.TEAM_WEBHOOK }}""",
+          ARTIFACT_NOTIFICATION_USES: '["slack"]'
+          ARTIFACT_NOTIFICATION_SLACK_WEBHOOK: ${{ secrets.TEAM_SLACK_WEBHOOK }}""",
             files[".github/workflows/accepted-artifact-issues.yml"],
         )
 

@@ -11,8 +11,8 @@ GitHub Pages. It runs on a push that touches the docs, the site project, or the 
 A build job runs on the default branch only. A deploy job publishes the build output. The
 repository owner sets the Pages source to "GitHub Actions" one time.
 
-When a notification provider is selected, the deploy job sends one message after the Pages action
-succeeds. The message goes to Google Chat or Slack.
+When notification providers are selected, the deploy job sends one message after the Pages action
+succeeds. The message goes to each selected Google Chat, Slack, and Telegram provider.
 
 ## Contract
 
@@ -23,7 +23,7 @@ succeeds. The message goes to Google Chat or Slack.
 | `.github/workflows/docs-site.yml` | `copy` | `text = workflow docsSite.notification` |
 
 The module renders the workflow from a Nix string. It adds notification permissions and steps only
-when a provider is selected.
+when one or more providers are selected.
 
 ### Workflow
 

@@ -22,11 +22,11 @@ adapter but does not activate a composition.
 - An enabled artifact issue composition needs one supported project-management adapter.
 - Each selected adapter owns its target and credential settings.
 - The artifact issue composition gives each artifact type one first status.
-- An enabled acceptance notification selects Google Chat or Slack and one webhook secret name.
+- An enabled acceptance notification selects one or more supported notification providers and their settings.
 - An enabled documentation site composition needs the artifact-driven model, the multiple
   repositories architecture, and GitHub Actions.
 - An enabled documentation site composition has a title, a site URL, and a base URL.
-- An enabled deployment notification selects Google Chat or Slack and one webhook secret name.
+- An enabled deployment notification selects one or more supported notification providers and their settings.
 
 ## Corrective policies
 

@@ -5,7 +5,7 @@
 The factory generates a trusted GitHub Actions workflow for the selected project provider. The
 workflow synchronizes each accepted feature artifact to one provider issue after a pull request
 merges. It also supports a manual full scan. An optional webhook step sends one accepted change
-summary to Google Chat or Slack after synchronization succeeds.
+summary to each selected Google Chat, Slack, and Telegram provider after synchronization succeeds.
 
 ## Teardown specifications
 

@@ -118,7 +118,7 @@ class NotificationTest(unittest.TestCase):
             return Response()
 
         MODULE.send_message(
-            "slack", "https://webhook.example/secret", "message", opener, delays.append
+            "slack", "https://webhook.example/secret", "message", opener=opener, sleeper=delays.append
         )
         self.assertEqual(3, len(attempts))
         self.assertEqual([1, 2], delays)
@@ -131,7 +131,7 @@ class NotificationTest(unittest.TestCase):
             raise urllib.error.HTTPError(request.full_url, 400, "bad request", {}, None)
 
         with self.assertRaisesRegex(RuntimeError, "HTTP 400"):
-            MODULE.send_message("google-chat", "https://webhook.example/secret", "message", opener)
+            MODULE.send_message("google-chat", "https://webhook.example/secret", "message", opener=opener)
         self.assertEqual(1, len(attempts))
 
     def test_exhausted_network_retries_do_not_expose_webhook(self):
@@ -142,7 +142,7 @@ class NotificationTest(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "network error") as raised:
             MODULE.send_message(
-                "slack", "https://webhook.example/private", "message", opener, delays.append
+                "slack", "https://webhook.example/private", "message", opener=opener, sleeper=delays.append
             )
         self.assertNotIn("private", str(raised.exception))
         self.assertEqual([1, 2], delays)
@@ -150,6 +150,40 @@ class NotificationTest(unittest.TestCase):
     def test_missing_webhook_fails_for_nonempty_result(self):
         with self.assertRaisesRegex(RuntimeError, "must not be empty"):
             MODULE.send_message("slack", "", MODULE.build_message(result()))
+
+    def test_telegram_uses_the_bot_api(self):
+        request = []
+
+        def opener(value, timeout):
+            request.append(value)
+            return Response()
+
+        MODULE.send_message("telegram", "bot-token", "message", "-100123", opener)
+        self.assertEqual("https://api.telegram.org/botbot-token/sendMessage", request[0].full_url)
+        self.assertEqual({"chat_id": "-100123", "text": "message"}, json.loads(request[0].data))
+
+    def test_send_all_attempts_every_provider_before_it_fails(self):
+        sent = []
+        original = MODULE.send_message
+
+        def deliver(provider, *args, **kwargs):
+            sent.append(provider)
+            if provider == "slack":
+                raise RuntimeError("slack failed")
+
+        MODULE.send_message = deliver
+        try:
+            with self.assertRaisesRegex(RuntimeError, "slack"):
+                MODULE.send_all({
+                    "ARTIFACT_NOTIFICATION_USES": '["google-chat", "slack", "telegram"]',
+                    "ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK": "google",
+                    "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK": "slack",
+                    "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN": "token",
+                    "ARTIFACT_NOTIFICATION_TELEGRAM_CHAT_ID": "chat",
+                }, "message")
+        finally:
+            MODULE.send_message = original
+        self.assertEqual(["google-chat", "slack", "telegram"], sent)
 
 
 if __name__ == "__main__":

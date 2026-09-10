@@ -3,6 +3,7 @@ let
     mkBoolOpt = inputs: inputs;
     mkEnumOpt = inputs: inputs;
     mkStrOpt = inputs: inputs;
+    mkListOpt = inputs: inputs;
   };
 
   lib = {
@@ -18,7 +19,13 @@ let
     mkIf = condition: value: if condition then value else { };
     mkForce = value: value;
     optionalString = condition: string: if condition then string else "";
+    optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
+    unique =
+      list:
+      builtins.foldl' (
+        items: item: if builtins.elem item items then items else items ++ [ item ]
+      ) [ ] list;
   };
 
   moduleFor =
@@ -30,8 +37,11 @@ let
       title ? "Documentation",
       url ? "https://example.github.io",
       baseUrl ? "/repo/",
-      notificationProvider ? "unset",
-      notificationSecret ? "DOCS_SITE_NOTIFICATION_WEBHOOK",
+      notificationUses ? [ ],
+      notificationGoogleChatSecret ? "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK",
+      notificationSlackSecret ? "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK",
+      notificationTelegramTokenSecret ? "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN",
+      notificationTelegramChatId ? "",
     }:
     import ../default.nix {
       inherit lib;
@@ -46,8 +56,13 @@ let
           inherit enable title url;
           base-url = baseUrl;
           notification = {
-            provider = notificationProvider;
-            webhook-secret = notificationSecret;
+            uses = notificationUses;
+            google-chat.webhook-secret = notificationGoogleChatSecret;
+            slack.webhook-secret = notificationSlackSecret;
+            telegram = {
+              token-secret = notificationTelegramTokenSecret;
+              chat-id = notificationTelegramChatId;
+            };
           };
         };
       };
@@ -59,12 +74,21 @@ let
   on = evalModule { enable = true; };
   googleChat = evalModule {
     enable = true;
-    notificationProvider = "google-chat";
+    notificationUses = [ "google-chat" ];
   };
   slack = evalModule {
     enable = true;
-    notificationProvider = "slack";
-    notificationSecret = "TEAM_WEBHOOK";
+    notificationUses = [ "slack" ];
+    notificationSlackSecret = "TEAM_SLACK_WEBHOOK";
+  };
+  multiProvider = evalModule {
+    enable = true;
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
   };
   off = evalModule { };
   single = evalModule {
@@ -89,8 +113,8 @@ let
   };
   invalidNotificationSecret = evalModule {
     enable = true;
-    notificationProvider = "slack";
-    notificationSecret = "invalid-secret";
+    notificationUses = [ "slack" ];
+    notificationSlackSecret = "invalid-secret";
   };
   invalidSetups = [
     single
@@ -182,14 +206,9 @@ let
       module = moduleFor { };
       options = module.options.factory.composition.artifact-driven.docs-site.notification;
     in
-    options.provider.default == "unset"
-    &&
-      options.provider.values == [
-        "unset"
-        "google-chat"
-        "slack"
-      ]
-    && options.webhook-secret.default == "DOCS_SITE_NOTIFICATION_WEBHOOK";
+    options.uses.default == [ ]
+    && options.google-chat.webhook-secret.default == "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK"
+    && options.telegram.token-secret.default == "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN";
   notificationFilesMatch =
     !(builtins.hasAttr notificationFile on.files)
     && builtins.hasAttr notificationFile googleChat.files
@@ -201,20 +220,24 @@ let
       disabled = on.files.".github/workflows/docs-site.yml".text;
       google = googleChat.files.".github/workflows/docs-site.yml".text;
       slackText = slack.files.".github/workflows/docs-site.yml".text;
+      multiText = multiProvider.files.".github/workflows/docs-site.yml".text;
     in
     !matches "Notify the team about the deployment" disabled
     && matches "actions/deploy-pages@v4.*Check out the notification code.*[.]github/docs-site/notify[.]py" google
     && matches "id-token: write.*contents: read" google
     && matches "persist-credentials: false" google
-    && matches "DOCS_SITE_NOTIFICATION_PROVIDER: google-chat" google
-    && matches "secrets[.]DOCS_SITE_NOTIFICATION_WEBHOOK" google
+    && matches "DOCS_SITE_NOTIFICATION_USES:.*google-chat" google
+    && matches "secrets[.]DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK" google
     && matches "DOCS_SITE_DEPLOYMENT_URL:.*steps[.]deployment[.]outputs[.]page_url" google
     && matches "DOCS_SITE_REPOSITORY:.*github[.]repository" google
     && matches "DOCS_SITE_REF_NAME:.*github[.]ref_name" google
     && matches "DOCS_SITE_COMMIT_SHA:.*github[.]sha" google
     && matches "DOCS_SITE_RUN_URL:.*github[.]server_url.*github[.]run_id" google
-    && matches "DOCS_SITE_NOTIFICATION_PROVIDER: slack" slackText
-    && matches "secrets[.]TEAM_WEBHOOK" slackText;
+    && matches "DOCS_SITE_NOTIFICATION_USES:.*slack" slackText
+    && matches "secrets[.]TEAM_SLACK_WEBHOOK" slackText
+    && matches "DOCS_SITE_NOTIFICATION_USES:.*google-chat.*slack.*telegram" multiText
+    && matches "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN.*DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: \"-100123\"" multiText
+    && !matches "Notify the team about the deployment.*Notify the team about the deployment" multiText;
   gitignoreMatches =
     let
       text = textOf "${site}/.gitignore";
@@ -232,7 +255,7 @@ let
       "npm run start"
       "GitHub Actions"
       "docs-site.notification"
-      "DOCS_SITE_NOTIFICATION_WEBHOOK"
+      "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK"
       "Google Chat incoming webhooks"
       "Slack incoming webhooks"
     ];

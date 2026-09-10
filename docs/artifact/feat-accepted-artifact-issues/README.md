@@ -4,7 +4,7 @@
 
 This feature creates project issues for feature artifacts after their pull request merges. The
 issues show the artifact hierarchy and link to the accepted repository content. An optional
-Google Chat or Slack notification summarizes the accepted changes.
+Google Chat, Slack, or Telegram notifications summarize the accepted changes.
 
 ## Artifacts
 
@@ -21,3 +21,4 @@ Google Chat or Slack notification summarizes the accepted changes.
 - [Show artifact types with labels](changes/change-artifact-type-labels/README.md)
 - [Split Trello planning and implementation boards](changes/change-split-trello-boards/README.md)
 - [Send accepted artifact notifications](changes/change-accepted-artifact-notifications/README.md)
+- [Use multiple accepted-artifact notification providers](changes/change-multi-provider-accepted-artifact-notifications/README.md)
