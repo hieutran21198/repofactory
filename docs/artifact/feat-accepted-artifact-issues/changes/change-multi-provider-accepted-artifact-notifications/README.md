@@ -1,6 +1,8 @@
 # Change: Use multiple accepted-artifact notification providers
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 6.0.0
+**To:** 7.0.0
 **Type:** Requirements
 
 ## Reason

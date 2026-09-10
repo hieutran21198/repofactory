@@ -1,6 +1,9 @@
 # Change: Select a provider during setup
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 1.3.0
+**To:** 2.0.0
+**Type:** Requirements
 
 ## Reason
 

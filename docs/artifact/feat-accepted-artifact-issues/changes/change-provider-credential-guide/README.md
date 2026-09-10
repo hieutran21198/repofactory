@@ -1,6 +1,8 @@
 # Change: Provider credential guide
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 1.2.0
+**To:** 1.3.0
 **Type:** Specifications, Decisions
 
 ## Reason

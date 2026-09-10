@@ -1,6 +1,9 @@
 # Change: Permit pull request comments
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 2.0.0
+**To:** 2.1.0
+**Type:** Specifications
 
 ## Reason
 

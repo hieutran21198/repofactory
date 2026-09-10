@@ -1,6 +1,8 @@
 # Change: Composition-owned artifact policy
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 1.0.0
+**To:** 1.1.0
 **Type:** Specifications, Decisions
 
 ## Reason

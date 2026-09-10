@@ -1,6 +1,8 @@
 # Change: Send accepted artifact notifications
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 5.0.0
+**To:** 6.0.0
 **Type:** Requirements
 
 ## Reason

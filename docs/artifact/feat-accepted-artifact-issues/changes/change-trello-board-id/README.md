@@ -1,6 +1,8 @@
 # Change: Resolve Trello board IDs before label creation
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 7.0.0
+**To:** 8.0.0
 **Type:** Requirements
 
 ## Reason

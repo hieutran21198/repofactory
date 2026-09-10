@@ -1,6 +1,8 @@
 # Change: DDD assets per architecture
 
 **Feature:** [Single repository architecture](../../README.md)
+**From:** 1.0.0
+**To:** 1.1.0
 **Type:** Specifications
 
 ## Reason

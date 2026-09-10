@@ -1,6 +1,8 @@
 # Change: Support Trello Free workspaces
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 2.1.0
+**To:** 3.0.0
 **Type:** Requirements
 
 ## Reason

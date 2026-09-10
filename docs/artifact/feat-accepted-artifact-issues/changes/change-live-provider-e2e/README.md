@@ -1,6 +1,9 @@
 # Change: Add live provider end-to-end checks
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 1.1.0
+**To:** 1.2.0
+**Type:** Specifications, Decisions
 
 ## Reason
 

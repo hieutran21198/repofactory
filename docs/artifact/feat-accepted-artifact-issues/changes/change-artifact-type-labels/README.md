@@ -1,6 +1,8 @@
 # Change: Show artifact types with labels
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 3.1.0
+**To:** 4.0.0
 **Type:** Requirements
 
 ## Reason

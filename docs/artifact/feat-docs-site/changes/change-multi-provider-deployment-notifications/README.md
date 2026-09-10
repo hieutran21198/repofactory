@@ -1,6 +1,8 @@
 # Change: Use multiple deployment notification providers
 
 **Feature:** [Documentation site](../../README.md)
+**From:** 2.0.0
+**To:** 3.0.0
 **Type:** Requirements
 
 ## Reason

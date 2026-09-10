@@ -1,6 +1,8 @@
 # Change: Split Trello planning and implementation boards
 
 **Feature:** [Accepted artifact issues](../../README.md)
+**From:** 4.0.0
+**To:** 5.0.0
 **Type:** Requirements
 
 ## Reason
