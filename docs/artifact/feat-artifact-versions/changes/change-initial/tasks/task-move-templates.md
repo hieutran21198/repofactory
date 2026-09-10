@@ -25,7 +25,7 @@ All paths are under
    `### templates/change/README.md` of spec-template-tree. The file has the lines `**From:**`,
    `**To:**`, `**Type:** Requirements | Specifications | Decisions | Correction`, and the section
    `## Removed artifacts`.
-7. In `change/requirements/README.md`, add the line `**Change:** [<change name>](../README.md)`
+7. In `change/requirements/README.md`, add the line `**Change:** [<change name>](../../../changes/change-<name>/README.md)`
    under the title, followed by one empty line. Do not change the rest of the file.
 8. Do step 7 in `change/specifications/README.md`.
 9. Do step 7 in `change/tasks/README.md`.

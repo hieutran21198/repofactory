@@ -196,7 +196,7 @@ under `versions/`.
 - A change holds only the artifacts that change. Do not copy an artifact that does not change.
 - When the list of teardown artifacts of a folder changes, the change holds the master `README.md`
   of that folder. The master lists every teardown artifact at the new version.
-- A master README in a change has the line `**Change:** [<change name>](../README.md)` under its
+- A master README in a change has the line `**Change:** [<change name>](../../../changes/change-<name>/README.md)` under its
   title.
 - A change that removes an artifact lists each path under `## Removed artifacts` in the change
   README. Each path is relative to the version folder. Example: `specifications/spec-old-api.md`.

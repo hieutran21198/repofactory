@@ -1,6 +1,6 @@
 # Specifications: Artifact versions
 
-**Change:** [Artifact versions](../README.md)
+**Change:** [Artifact versions](../../../changes/change-artifact-versions/README.md)
 
 ## Solution
 

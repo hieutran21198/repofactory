@@ -103,7 +103,7 @@ The full text of the template:
 
 ### The master templates under `templates/change/`
 
-Each master template gets the line `**Change:** [<change name>](../README.md)` under its title,
+Each master template gets the line `**Change:** [<change name>](../../../changes/change-<name>/README.md)` under its title,
 followed by one empty line. The rest of each file does not change.
 
 `templates/change/requirements/README.md`:
@@ -111,7 +111,7 @@ followed by one empty line. The rest of each file does not change.
 ```markdown
 # Requirements: <feature name>
 
-**Change:** [<change name>](../README.md)
+**Change:** [<change name>](../../../changes/change-<name>/README.md)
 
 ## Business need
 
@@ -138,7 +138,7 @@ followed by one empty line. The rest of each file does not change.
 ```markdown
 # Specifications: <feature name>
 
-**Change:** [<change name>](../README.md)
+**Change:** [<change name>](../../../changes/change-<name>/README.md)
 
 ## Solution
 
@@ -160,7 +160,7 @@ followed by one empty line. The rest of each file does not change.
 ```markdown
 # Implementation plan: <feature name>
 
-**Change:** [<change name>](../README.md)
+**Change:** [<change name>](../../../changes/change-<name>/README.md)
 
 ## Order of work
 

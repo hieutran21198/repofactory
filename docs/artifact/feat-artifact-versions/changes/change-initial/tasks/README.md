@@ -1,6 +1,6 @@
 # Implementation plan: Artifact versions
 
-**Change:** [Initial](../README.md)
+**Change:** [Initial](../../../changes/change-initial/README.md)
 
 ## Order of work
 

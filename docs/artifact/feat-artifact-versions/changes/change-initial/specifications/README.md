@@ -1,6 +1,6 @@
 # Specifications: Artifact versions
 
-**Change:** [Initial](../README.md)
+**Change:** [Initial](../../../changes/change-initial/README.md)
 
 ## Solution
 

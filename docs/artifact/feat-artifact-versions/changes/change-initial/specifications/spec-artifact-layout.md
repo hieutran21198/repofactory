@@ -90,8 +90,10 @@ gives the bump. The type `Requirements` is always the first when present. The ty
 - When the list of teardown artifacts of a folder changes, the change holds the master
   `README.md` of that folder. The master lists every teardown artifact of the folder at the new
   version, not only the artifacts of the change.
-- A master README in a change has the line `**Change:** [<change title>](../README.md)` under
-  its title. A teardown artifact keeps its `**Master:**` link to the master in the same folder.
+- A master README in a change has the line
+  `**Change:** [<change title>](../../../changes/change-<name>/README.md)` under its title. The
+  long relative path resolves from the change folder and from the version folder. A teardown
+  artifact keeps its `**Master:**` link to the master in the same folder.
 - A change that removes an artifact lists its path under the heading `## Removed artifacts` in
   the change README. Each item is one path relative to the version folder, for example
   `specifications/spec-old-api.md`. A change that removes no artifact has no such heading.

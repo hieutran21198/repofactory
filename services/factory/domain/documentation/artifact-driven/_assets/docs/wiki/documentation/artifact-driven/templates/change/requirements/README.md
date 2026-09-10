@@ -1,6 +1,6 @@
 # Requirements: <feature name>
 
-**Change:** [<change name>](../README.md)
+**Change:** [<change name>](../../../changes/change-<name>/README.md)
 
 ## Business need
 

@@ -1,6 +1,6 @@
 # Requirements: Artifact versions
 
-**Change:** [Initial](../README.md)
+**Change:** [Initial](../../../changes/change-initial/README.md)
 
 ## Business need
 
