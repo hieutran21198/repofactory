@@ -1,12 +1,40 @@
 let
   optionUtils = {
-    mkBoolOpt = inputs: inputs;
-    mkEnumOpt = inputs: inputs;
-    mkStrOpt = inputs: inputs;
-    mkListOpt = inputs: inputs;
+    mkBoolOpt = inputs: inputs // { testType = "bool"; };
+    mkEnumOpt = inputs: inputs // { testType = "enum"; };
+    mkStrOpt = inputs: inputs // { testType = "str"; };
+    mkListOpt =
+      inputs:
+      inputs
+      // {
+        testType = {
+          kind = "list";
+          element = inputs.ofType or null;
+        };
+      };
+    mkAttrsOpt =
+      inputs:
+      inputs
+      // {
+        testType = {
+          kind = "attrs";
+          element = inputs.ofType or null;
+        };
+      };
   };
 
   lib = {
+    types = {
+      str = "str";
+      enum = values: {
+        kind = "enum";
+        inherit values;
+      };
+      submodule = module: {
+        kind = "submodule";
+        inherit module;
+      };
+    };
     mkMerge = builtins.foldl' (
       acc: block:
       acc
@@ -21,6 +49,9 @@ let
     optionalString = condition: string: if condition then string else "";
     optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
+    concatStringsSep = builtins.concatStringsSep;
+    concatMapStrings = f: values: builtins.concatStringsSep "" (map f values);
+    mapAttrsToList = f: attrs: map (name: f name attrs.${name}) (builtins.attrNames attrs);
     unique =
       list:
       builtins.foldl' (
@@ -42,6 +73,11 @@ let
       notificationSlackSecret ? "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK",
       notificationTelegramTokenSecret ? "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN",
       notificationTelegramChatId ? "",
+      staticDirectories ? [ ],
+      workflowWatchPaths ? [ ],
+      beforeNodeSetup ? [ ],
+      beforeSiteBuild ? [ ],
+      afterSiteBuild ? [ ],
     }:
     import ../default.nix {
       inherit lib;
@@ -55,6 +91,15 @@ let
         composition.artifact-driven.docs-site = {
           inherit enable title url;
           base-url = baseUrl;
+          static-directories = staticDirectories;
+          workflow = {
+            watch-paths = workflowWatchPaths;
+            build = {
+              before-node-setup = beforeNodeSetup;
+              before-site-build = beforeSiteBuild;
+              after-site-build = afterSiteBuild;
+            };
+          };
           notification = {
             uses = notificationUses;
             google-chat.webhook-secret = notificationGoogleChatSecret;
@@ -90,6 +135,46 @@ let
     ];
     notificationTelegramChatId = "-100123";
   };
+  extensions = evalModule {
+    enable = true;
+    staticDirectories = [
+      "static"
+      "generated-static"
+    ];
+    workflowWatchPaths = [ "services/manual/docs/**" ];
+    beforeNodeSetup = [
+      {
+        name = "Build the manual PDF";
+        uses = "xu-cheng/latex-action@v4";
+        "with" = {
+          root_file = "manual.tex";
+          working_directory = "services/manual/docs";
+        };
+        env.TEXINPUTS = ".:./styles//:";
+      }
+    ];
+    beforeSiteBuild = [
+      {
+        name = "Copy the manual PDF";
+        run = ''
+          mkdir -p static/manual
+          cp "$PDF_SOURCE" static/manual/manual.pdf
+        '';
+        env.PDF_SOURCE = "../../services/manual/docs/manual.pdf";
+        working-directory = "apps/documentation";
+      }
+    ];
+    afterSiteBuild = [
+      {
+        name = "Check the first output";
+        run = "test -f build/manual/manual.pdf";
+      }
+      {
+        name = "Check the second output";
+        run = "test -d build";
+      }
+    ];
+  };
   off = evalModule { };
   single = evalModule {
     enable = true;
@@ -115,6 +200,41 @@ let
     enable = true;
     notificationUses = [ "slack" ];
     notificationSlackSecret = "invalid-secret";
+  };
+  emptyExtensionPath = evalModule {
+    enable = true;
+    staticDirectories = [ "" ];
+  };
+  stepWithUsesAndRun = evalModule {
+    enable = true;
+    beforeNodeSetup = [
+      {
+        uses = "actions/example@v1";
+        run = "echo invalid";
+      }
+    ];
+  };
+  stepWithoutUsesOrRun = evalModule {
+    enable = true;
+    beforeNodeSetup = [ { name = "Invalid"; } ];
+  };
+  runStepWithInputs = evalModule {
+    enable = true;
+    beforeSiteBuild = [
+      {
+        run = "echo invalid";
+        "with".value = "invalid";
+      }
+    ];
+  };
+  actionStepWithWorkingDirectory = evalModule {
+    enable = true;
+    beforeNodeSetup = [
+      {
+        uses = "actions/example@v1";
+        working-directory = "apps/documentation";
+      }
+    ];
   };
   invalidSetups = [
     single
@@ -167,6 +287,17 @@ let
       title = "Documentation";
       url = "https://example.github.io";
       baseUrl = "/repo/";
+      staticDirectories = [ ];
+    };
+  extensionSiteJsonRoundTrip =
+    builtins.fromJSON extensions.files."${site}/site.json".text == {
+      title = "Documentation";
+      url = "https://example.github.io";
+      baseUrl = "/repo/";
+      staticDirectories = [
+        "static"
+        "generated-static"
+      ];
     };
   packageJsonPinned =
     pkg.private == true
@@ -182,6 +313,7 @@ let
     builtins.all (pattern: matches pattern text) [
       "trailingSlash: true"
       "site\\.json"
+      "staticDirectories: site\\.staticDirectories"
       "'\\.\\./\\.\\./docs'"
       "routeBasePath: '/'"
       "format: 'detect'"
@@ -199,6 +331,52 @@ let
       "npm ci"
       "pages: write"
       "id-token: write"
+    ];
+  defaultWorkflowUnchanged =
+    on.files.".github/workflows/docs-site.yml".text
+    == builtins.readFile ../../../../../../.github/workflows/docs-site.yml;
+  extensionOptionsMatch =
+    let
+      options = (moduleFor { }).options.factory.composition.artifact-driven.docs-site;
+      stepType = options.workflow.build.before-node-setup.testType.element;
+      stepOptions = stepType.module.options;
+    in
+    options.static-directories.default == [ ]
+    &&
+      options.static-directories.testType == {
+        kind = "list";
+        element = "str";
+      }
+    && options.workflow.watch-paths.default == [ ]
+    && options.workflow.build.before-node-setup.default == [ ]
+    && options.workflow.build.before-site-build.default == [ ]
+    && options.workflow.build.after-site-build.default == [ ]
+    && stepType.kind == "submodule"
+    && stepOptions.name.testType == "str"
+    && stepOptions.uses.testType == "str"
+    &&
+      stepOptions."with".testType == {
+        kind = "attrs";
+        element = "str";
+      }
+    && stepOptions."with".default == { }
+    && stepOptions.run.testType == "str"
+    &&
+      stepOptions.env.testType == {
+        kind = "attrs";
+        element = "str";
+      }
+    && stepOptions.env.default == { }
+    && stepOptions.working-directory.testType == "str";
+  extensionWorkflowMatches =
+    let
+      text = extensions.files.".github/workflows/docs-site.yml".text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "[.]github/workflows/docs-site[.]yml.*services/manual/docs/[*][*]"
+      "actions/checkout@v4.*Build the manual PDF.*xu-cheng/latex-action@v4.*root_file.*manual[.]tex.*working_directory.*services/manual/docs.*TEXINPUTS.*actions/setup-node@v4"
+      "npm ci.*Copy the manual PDF.*mkdir -p static/manual.*PDF_SOURCE.*working-directory.*apps/documentation.*npm run build"
+      "npm run build.*Check the first output.*Check the second output.*actions/upload-pages-artifact@v3"
     ];
   notificationFile = ".github/docs-site/notify.py";
   notificationOptionsMatch =
@@ -255,6 +433,10 @@ let
       "npm run start"
       "GitHub Actions"
       "docs-site.notification"
+      "static-directories"
+      "workflow.build.before-node-setup"
+      "xu-cheng/latex-action@v4"
+      "docusaurus.config.local.js"
       "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK"
       "Google Chat incoming webhooks"
       "Slack incoming webhooks"
@@ -262,6 +444,13 @@ let
   onAssertionsPass = assertionsPass on;
   notificationAssertionsPass = assertionsPass googleChat && assertionsPass slack;
   invalidNotificationSecretRejected = !assertionsPass invalidNotificationSecret;
+  invalidExtensionsRejected = builtins.all (cfg: !assertionsPass cfg) [
+    emptyExtensionPath
+    stepWithUsesAndRun
+    stepWithoutUsesOrRun
+    runStepWithInputs
+    actionStepWithWorkingDirectory
+  ];
   offEmitsNothing = (off.files or { }) == { } && (off.assertions or [ ]) == [ ];
   invalidSetupsRejected = builtins.all (cfg: !assertionsPass cfg) invalidSetups;
 in
@@ -269,10 +458,14 @@ assert filesPresent;
 assert sourcesExist;
 assert copyModes;
 assert siteJsonRoundTrip;
+assert extensionSiteJsonRoundTrip;
 assert packageJsonPinned;
 assert lockfilePinned;
 assert configMatches;
 assert workflowMatches;
+assert defaultWorkflowUnchanged;
+assert extensionOptionsMatch;
+assert extensionWorkflowMatches;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
@@ -281,6 +474,7 @@ assert wikiPageMatches;
 assert onAssertionsPass;
 assert notificationAssertionsPass;
 assert invalidNotificationSecretRejected;
+assert invalidExtensionsRejected;
 assert offEmitsNothing;
 assert invalidSetupsRejected;
 {
@@ -289,10 +483,14 @@ assert invalidSetupsRejected;
     sourcesExist
     copyModes
     siteJsonRoundTrip
+    extensionSiteJsonRoundTrip
     packageJsonPinned
     lockfilePinned
     configMatches
     workflowMatches
+    defaultWorkflowUnchanged
+    extensionOptionsMatch
+    extensionWorkflowMatches
     notificationOptionsMatch
     notificationFilesMatch
     notificationWorkflowsMatch
@@ -301,6 +499,7 @@ assert invalidSetupsRejected;
     onAssertionsPass
     notificationAssertionsPass
     invalidNotificationSecretRejected
+    invalidExtensionsRejected
     offEmitsNothing
     invalidSetupsRejected
     ;

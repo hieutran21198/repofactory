@@ -47,6 +47,9 @@ The renderer writes one YAML list item for each typed step. It supports only `na
 `run`, `env`, and `working-directory`. It JSON-encodes scalar values and map values. YAML accepts
 these JSON scalar forms. This rule protects punctuation, expressions, and multiline run strings.
 
+A Nix configuration quotes the attribute name as `"with"`. The generated YAML uses the unquoted
+GitHub Actions field name `with`.
+
 The renderer omits empty `with` and `env` maps. It does not combine or reorder configured steps.
 
 ### Unchanged behavior

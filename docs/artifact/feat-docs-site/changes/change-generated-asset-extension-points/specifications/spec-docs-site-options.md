@@ -44,6 +44,8 @@ The notification option tree and its defaults do not change.
 | `env` | `attrsOf str` | `{}` | Set environment variables for the step. |
 | `working-directory` | optional `str` | absent | Override the job default for a run step. It needs `run`. |
 
+Nix configurations write the `with` field as `"with"` because `with` is a Nix keyword.
+
 The renderer omits absent fields and empty maps. It keeps list order. It writes fields in the table
 order and map keys in Nix attribute order.
 
