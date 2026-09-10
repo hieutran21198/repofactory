@@ -25,6 +25,10 @@ working rules the factory supplies to a generated repository.
 | Documentation site | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. |
 | Deployment notification | One team message that reports a successful documentation site deployment. |
 | Notification provider | An external system that receives a team notification. |
+| Change | One unit of work on a feature. It holds the reason and the artifacts that change. |
+| Version | The full requirements, specifications, and decisions of a feature after one change, named major.minor.patch. |
+| Current version | The version that the feature README names. |
+| Change type | The kind of a change: Requirements, Specifications, Decisions, or Correction. |
 
 ## Business rules
 
@@ -36,6 +40,9 @@ working rules the factory supplies to a generated repository.
 - An acceptance notification follows successful artifact issue synchronization.
 - A deployment notification follows a successful documentation site deployment.
 - A notification can use one or more supported notification providers.
+- Each unit of work on a feature is a change. The first change of a feature is `change-initial`.
+- A version is produced by copy only. A file under `versions/` is never edited.
+- A file under `versions/` does not make an artifact issue.
 
 ## Inbound messages
 

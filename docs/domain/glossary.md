@@ -18,3 +18,7 @@ write two rows.
 | Documentation site | context-factory | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. | Wiki |
 | Deployment notification | context-factory | One team message that reports a successful documentation site deployment. | Acceptance notification |
 | Notification provider | context-factory | An external system that receives a team notification. | Project-management provider |
+| Change | context-factory | One unit of work on a feature, in `changes/change-<name>/`. It holds the reason and the artifacts that change. | Version |
+| Version | context-factory | The full requirements, specifications, and decisions of a feature after one change, in `versions/<version>/`. Named major.minor.patch. | Change |
+| Current version | context-factory | The version that the feature README names. It gives the current state of the feature. | Status |
+| Change type | context-factory | The kind of a change: Requirements, Specifications, Decisions, or Correction. It gives the part of the version number that the change bumps. | Artifact type |

@@ -15,3 +15,4 @@ before you add or change a feature.
 | [Expert role skill](feat-expert-role-skill/README.md) | Ships a skill that sets up an implementation expert role from the files in the project only. |
 | [Documentation site](feat-docs-site/README.md) | Renders the `docs/` tree as a website and publishes it to GitHub Pages from a generated workflow. |
 | [DDD review skill](feat-ddd-review-skill/README.md) | Ships one shared skill to review DDD artifacts in generated projects. |
+| [Artifact versions](feat-artifact-versions/README.md) | Makes a change the unit of work on a feature and adds a version folder that holds the full state of the feature. |
