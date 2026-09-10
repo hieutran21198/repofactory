@@ -79,6 +79,19 @@ let
       beforeSiteBuild ? [ ],
       afterSiteBuild ? [ ],
     }:
+    let
+      normalizeStep =
+        step:
+        {
+          name = null;
+          uses = null;
+          run = null;
+          working-directory = null;
+          "with" = { };
+          env = { };
+        }
+        // step;
+    in
     import ../default.nix {
       inherit lib;
       config.factory = {
@@ -95,9 +108,9 @@ let
           workflow = {
             watch-paths = workflowWatchPaths;
             build = {
-              before-node-setup = beforeNodeSetup;
-              before-site-build = beforeSiteBuild;
-              after-site-build = afterSiteBuild;
+              before-node-setup = map normalizeStep beforeNodeSetup;
+              before-site-build = map normalizeStep beforeSiteBuild;
+              after-site-build = map normalizeStep afterSiteBuild;
             };
           };
           notification = {
@@ -353,7 +366,11 @@ let
     && options.workflow.build.after-site-build.default == [ ]
     && stepType.kind == "submodule"
     && stepOptions.name.testType == "str"
+    && stepOptions.name.default == null
+    && stepOptions.name.nullable
     && stepOptions.uses.testType == "str"
+    && stepOptions.uses.default == null
+    && stepOptions.uses.nullable
     &&
       stepOptions."with".testType == {
         kind = "attrs";
@@ -361,13 +378,17 @@ let
       }
     && stepOptions."with".default == { }
     && stepOptions.run.testType == "str"
+    && stepOptions.run.default == null
+    && stepOptions.run.nullable
     &&
       stepOptions.env.testType == {
         kind = "attrs";
         element = "str";
       }
     && stepOptions.env.default == { }
-    && stepOptions.working-directory.testType == "str";
+    && stepOptions.working-directory.testType == "str"
+    && stepOptions.working-directory.default == null
+    && stepOptions.working-directory.nullable;
   extensionWorkflowMatches =
     let
       text = extensions.files.".github/workflows/docs-site.yml".text;
@@ -378,6 +399,11 @@ let
       "npm ci.*Copy the manual PDF.*mkdir -p static/manual.*PDF_SOURCE.*working-directory.*apps/documentation.*npm run build"
       "npm run build.*Check the first output.*Check the second output.*actions/upload-pages-artifact@v3"
     ];
+  optionalCommandFieldsOmitted =
+    let
+      text = extensions.files.".github/workflows/docs-site.yml".text;
+    in
+    !matches "uses: null" text && !matches "run: null" text && !matches "working-directory: null" text;
   notificationFile = ".github/docs-site/notify.py";
   notificationOptionsMatch =
     let
@@ -466,6 +492,7 @@ assert workflowMatches;
 assert defaultWorkflowUnchanged;
 assert extensionOptionsMatch;
 assert extensionWorkflowMatches;
+assert optionalCommandFieldsOmitted;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
@@ -491,6 +518,7 @@ assert invalidSetupsRejected;
     defaultWorkflowUnchanged
     extensionOptionsMatch
     extensionWorkflowMatches
+    optionalCommandFieldsOmitted
     notificationOptionsMatch
     notificationFilesMatch
     notificationWorkflowsMatch

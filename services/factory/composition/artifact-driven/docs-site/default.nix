@@ -9,9 +9,13 @@ let
   workflowStepModule = {
     options = {
       name = _utils.mkStrOpt {
+        nullable = true;
+        default = null;
         description = "The displayed name of the GitHub Actions step";
       };
       uses = _utils.mkStrOpt {
+        nullable = true;
+        default = null;
         description = "The GitHub Action that the step uses";
       };
       "with" = _utils.mkAttrsOpt {
@@ -20,6 +24,8 @@ let
         description = "String inputs for the GitHub Action";
       };
       run = _utils.mkStrOpt {
+        nullable = true;
+        default = null;
         description = "The command or script that the step runs";
       };
       env = _utils.mkAttrsOpt {
@@ -28,6 +34,8 @@ let
         description = "String environment variables for the step";
       };
       working-directory = _utils.mkStrOpt {
+        nullable = true;
+        default = null;
         description = "The working directory for a run step";
       };
     };
@@ -45,13 +53,13 @@ let
   renderWorkflowStep =
     step:
     "\n      -"
-    + lib.optionalString (step ? name) "\n        name: ${yamlScalar step.name}"
-    + lib.optionalString (step ? uses) "\n        uses: ${yamlScalar step.uses}"
+    + lib.optionalString (step.name != null) "\n        name: ${yamlScalar step.name}"
+    + lib.optionalString (step.uses != null) "\n        uses: ${yamlScalar step.uses}"
     + renderMap "with" (step."with" or { })
-    + lib.optionalString (step ? run) "\n        run: ${yamlScalar step.run}"
+    + lib.optionalString (step.run != null) "\n        run: ${yamlScalar step.run}"
     + renderMap "env" (step.env or { })
     + lib.optionalString (
-      step ? working-directory
+      step.working-directory != null
     ) "\n        working-directory: ${yamlScalar step.working-directory}";
   renderWorkflowSteps = steps: lib.concatMapStrings renderWorkflowStep steps;
   workflow =
@@ -219,12 +227,12 @@ in
       validWorkflowStep =
         step:
         let
-          hasUses = step ? uses && step.uses != "";
-          hasRun = step ? run && step.run != "";
+          hasUses = step.uses != null && step.uses != "";
+          hasRun = step.run != null && step.run != "";
         in
         hasUses != hasRun
         && ((step."with" or { }) == { } || hasUses)
-        && (!(step ? working-directory) || (hasRun && step.working-directory != ""));
+        && (step.working-directory == null || (hasRun && step.working-directory != ""));
       site = "apps/documentation";
     in
     lib.mkIf docsSite.enable {
