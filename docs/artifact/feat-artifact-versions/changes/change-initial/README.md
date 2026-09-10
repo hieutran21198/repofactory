@@ -19,3 +19,4 @@ one layout that keeps each change and gives the full state of the feature at eac
 - [Requirements](requirements/README.md)
 - [Specifications](specifications/README.md)
 - [Decisions](decisions/)
+- [Implementation plan](tasks/README.md)
