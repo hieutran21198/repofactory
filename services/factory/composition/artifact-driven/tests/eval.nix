@@ -451,6 +451,39 @@ let
     builtins.match ".*expert-role.*" (base "solution-expert") != null
     && builtins.match ".*expert-role.*" (base "requirement-expert") == null;
 
+  dddReviewPath = ../_assets/agent/skill/ddd-review;
+  dddReviewText = builtins.readFile (dddReviewPath + "/SKILL.md");
+  dddReviewShipped =
+    builtins.all (cfg: cfg.factory.domain.agent.skill.general.ddd-review == dddReviewPath)
+      [
+        configs.multipleOn
+        configs.singleOn
+      ];
+  dddReviewOmitted =
+    builtins.all (cfg: !(builtins.hasAttr "ddd-review" (cfg.factory.domain.agent.skill.general or { })))
+      [
+        configs.multipleOff
+        configs.singleOff
+        noArchOn
+        documentationOff
+      ];
+  dddReviewFileExists = builtins.pathExists (dddReviewPath + "/SKILL.md");
+  dddReviewFrontmatter =
+    builtins.match "---\nname: ddd-review\ndescription: Review DDD artifacts, bounded context canvases, aggregate invariants, and artifact links.*\n---\n.*" dddReviewText
+    != null;
+  dddReviewContent = builtins.all (pattern: builtins.match pattern dddReviewText != null) [
+    ".*## When to use.*"
+    ".*## Read first.*"
+    ".*## Procedure.*"
+    ".*## Checks.*"
+    ".*## Report.*"
+    ".*## Rules.*"
+    ".*services/.*src/.*"
+    ".*requirement expert.*phase 1.*"
+    ".*solution expert.*phases 2 and 3.*"
+    ".*Do not change.*"
+  ];
+
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
     config.factory._utils = optionUtils;
@@ -498,6 +531,11 @@ assert skillOmitted;
 assert skillIsGeneric;
 assert skillFrontmatter;
 assert solutionExpertNamesSkill;
+assert dddReviewShipped;
+assert dddReviewOmitted;
+assert dddReviewFileExists;
+assert dddReviewFrontmatter;
+assert dddReviewContent;
 {
   inherit
     sourcesMatch
@@ -528,5 +566,10 @@ assert solutionExpertNamesSkill;
     skillIsGeneric
     skillFrontmatter
     solutionExpertNamesSkill
+    dddReviewShipped
+    dddReviewOmitted
+    dddReviewFileExists
+    dddReviewFrontmatter
+    dddReviewContent
     ;
 }

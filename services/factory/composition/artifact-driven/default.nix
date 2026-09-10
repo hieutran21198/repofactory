@@ -222,9 +222,22 @@ in
             in
             {
               role.builder = builtinRoles;
-              skill.general = lib.foldl' (
-                acc: roleName: acc // loadRoleSkills ./_assets/agent/skill/by-role roleName
-              ) { } (builtins.attrNames builtinRoles);
+              skill.general =
+                (lib.foldl' (acc: roleName: acc // loadRoleSkills ./_assets/agent/skill/by-role roleName) { } (
+                  builtins.attrNames builtinRoles
+                ))
+                //
+                  lib.optionalAttrs
+                    (
+                      ddd
+                      && builtins.elem repo-arch.use [
+                        "multiple"
+                        "single"
+                      ]
+                    )
+                    {
+                      ddd-review = ./_assets/agent/skill/ddd-review;
+                    };
             };
         };
       })
