@@ -15,5 +15,5 @@ validate only fields that have a non-null value.
 
 ## Artifacts
 
-- [Specifications](specifications/README.md)
+- [Corrected workflow-step specification](specifications/spec-docs-site-options.md)
 - [Implementation plan](tasks/README.md)
