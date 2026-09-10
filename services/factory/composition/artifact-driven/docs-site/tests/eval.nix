@@ -427,6 +427,12 @@ let
       "npm ci.*Copy the manual PDF.*mkdir -p static/manual.*PDF_SOURCE.*working-directory.*apps/documentation.*npm run build"
       "npm run build.*Check the first output.*Check the second output.*actions/upload-pages-artifact@v3"
     ];
+  extensionWatchPathIndentation =
+    let
+      text = extensions.files.".github/workflows/docs-site.yml".text;
+    in
+    matches "\n      - \"services/manual/docs/[*][*]\"\n" text
+    && !matches "\n            - \"services/manual/docs/[*][*]\"\n" text;
   optionalCommandFieldsOmitted =
     let
       text = extensions.files.".github/workflows/docs-site.yml".text;
@@ -521,6 +527,7 @@ assert workflowMatches;
 assert defaultWorkflowUnchanged;
 assert extensionOptionsMatch;
 assert extensionWorkflowMatches;
+assert extensionWatchPathIndentation;
 assert optionalCommandFieldsOmitted;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
@@ -547,6 +554,7 @@ assert invalidSetupsRejected;
     defaultWorkflowUnchanged
     extensionOptionsMatch
     extensionWorkflowMatches
+    extensionWatchPathIndentation
     optionalCommandFieldsOmitted
     notificationOptionsMatch
     notificationFilesMatch

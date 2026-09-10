@@ -75,7 +75,7 @@ let
       notificationEnabled = notification.uses != [ ];
       notificationPermission = if notificationEnabled then "\n      contents: read" else "";
       watchPaths = lib.concatMapStrings (
-        path: "\n            - ${yamlScalar path}"
+        path: "\n      - ${yamlScalar path}"
       ) docsSite.workflow.watch-paths;
       beforeNodeSetup = renderWorkflowSteps docsSite.workflow.build.before-node-setup;
       beforeSiteBuild = renderWorkflowSteps docsSite.workflow.build.before-site-build;
