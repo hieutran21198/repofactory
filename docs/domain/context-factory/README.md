@@ -23,6 +23,7 @@ working rules the factory supplies to a generated repository.
 | Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
 | Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
 | Documentation site | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. |
+| Generated documentation asset | A file that a workflow makes and adds to a documentation site static directory. |
 | Deployment notification | One team message that reports a successful documentation site deployment. |
 | Notification provider | An external system that receives a team notification. |
 | Change | One unit of work on a feature. It holds the reason and the artifacts that change. |
@@ -39,6 +40,7 @@ working rules the factory supplies to a generated repository.
 - Provider identifiers do not occur in artifact files.
 - An acceptance notification follows successful artifact issue synchronization.
 - A deployment notification follows a successful documentation site deployment.
+- A documentation site extension adds generated assets without replacing a factory-owned file.
 - A notification can use one or more supported notification providers.
 - Each unit of work on a feature is a change. The first change of a feature is `change-initial`.
 - A version is produced by copy only. A file under `versions/` is never edited.
