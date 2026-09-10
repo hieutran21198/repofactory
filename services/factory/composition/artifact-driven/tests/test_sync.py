@@ -193,6 +193,7 @@ class TrelloAdapterTest(unittest.TestCase):
         other_marker = MODULE.artifact_marker("other/repo", "docs/artifact/feat-other/README.md")
         api = QueueApi(
             [
+                {"id": "board-id"},
                 [
                     {"id": "accepted", "name": "Accepted", "closed": False},
                     {"id": "withdrawn", "name": "Withdrawn", "closed": False},
@@ -225,6 +226,7 @@ class TrelloAdapterTest(unittest.TestCase):
         )
         api = QueueApi(
             [
+                {"id": "board-id"},
                 [
                     {"id": "accepted", "name": "Accepted", "closed": False},
                     {"id": "withdrawn", "name": "Withdrawn", "closed": False},
@@ -264,6 +266,26 @@ class TrelloAdapterTest(unittest.TestCase):
             adapter.cards[path]["idLabels"],
         )
         self.assert_no_custom_fields_request(api)
+
+    def test_preflight_uses_resolved_board_id_for_new_labels(self):
+        responses = [
+            {"id": "internal-board-id"},
+            [
+                {"id": "accepted", "name": "Accepted", "closed": False},
+                {"id": "withdrawn", "name": "Withdrawn", "closed": False},
+            ],
+            [],
+        ] + [
+            {"id": f"label-{kind}", "name": MODULE.type_label(kind)} for kind in MODULE.ARTIFACT_KINDS
+        ] + [[]]
+        api = QueueApi(responses)
+        adapter = MODULE.TrelloAdapter({"boardId": "CaFqAJ3t"}, "owner/repo", api)
+
+        adapter.preflight(self.statuses)
+
+        label_requests = [request for request in api.requests if request[0] == "POST" and "/labels?" in request[1]]
+        self.assertEqual(len(MODULE.ARTIFACT_KINDS), len(label_requests))
+        self.assertTrue(all(payload["idBoard"] == "internal-board-id" for _, _, payload in label_requests))
 
     def test_label_merge_preserves_user_labels(self):
         issue = {"labels": [{"name": "user-label"}, {"name": "artifact:task"}]}
