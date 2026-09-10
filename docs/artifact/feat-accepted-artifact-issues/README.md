@@ -1,6 +1,6 @@
 # Feature: Accepted artifact issues
 
-**Current version:** 8.0.0
+**Current version:** 8.1.0
 
 ## Summary
 
@@ -10,9 +10,9 @@ Google Chat, Slack, or Telegram notifications summarize the accepted changes.
 
 ## Current artifacts
 
-- [Requirements](versions/8.0.0/requirements/README.md)
-- [Specifications](versions/8.0.0/specifications/README.md)
-- [Decisions](versions/8.0.0/decisions/)
+- [Requirements](versions/8.1.0/requirements/README.md)
+- [Specifications](versions/8.1.0/specifications/README.md)
+- [Decisions](versions/8.1.0/decisions/)
 
 ## Versions
 
@@ -33,9 +33,9 @@ Google Chat, Slack, or Telegram notifications summarize the accepted changes.
 | 8.0.0 | [Resolve Trello board IDs before label creation](changes/change-trello-board-id/README.md) | Requirements | 5b5d713..7236e9e |
 | 8.1.0 | [Artifact versions](changes/change-artifact-versions/README.md) | Specifications | 9ccc3ff |
 
-Only version 8.0.0 has a folder in `versions/`. The versions before it were folded into
-8.0.0 when the artifacts moved to the changes and versions layout. Read the change of each
-version for the artifacts of that step.
+Versions 1.0.0 to 7.0.0 have no folder in `versions/`. They were folded into 8.0.0 when the
+artifacts moved to the changes and versions layout. Versions 8.0.0 and 8.1.0 have a folder. Read
+the change of each version for the artifacts of that step.
 
 ## Artifacts
 
