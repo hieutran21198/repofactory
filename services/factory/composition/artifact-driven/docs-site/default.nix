@@ -6,6 +6,12 @@
 }:
 let
   inherit (config.${namespace}) _utils;
+  workflowScalarType = lib.types.oneOf [
+    lib.types.str
+    lib.types.bool
+    lib.types.int
+    lib.types.float
+  ];
   workflowStepModule = {
     options = {
       name = _utils.mkStrOpt {
@@ -19,9 +25,9 @@ let
         description = "The GitHub Action that the step uses";
       };
       "with" = _utils.mkAttrsOpt {
-        ofType = lib.types.str;
+        ofType = workflowScalarType;
         default = { };
-        description = "String inputs for the GitHub Action";
+        description = "Scalar inputs for the GitHub Action";
       };
       run = _utils.mkStrOpt {
         nullable = true;
@@ -29,9 +35,9 @@ let
         description = "The command or script that the step runs";
       };
       env = _utils.mkAttrsOpt {
-        ofType = lib.types.str;
+        ofType = workflowScalarType;
         default = { };
-        description = "String environment variables for the step";
+        description = "Scalar environment variables for the step";
       };
       working-directory = _utils.mkStrOpt {
         nullable = true;

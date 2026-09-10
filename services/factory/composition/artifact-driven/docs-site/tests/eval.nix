@@ -26,6 +26,13 @@ let
   lib = {
     types = {
       str = "str";
+      bool = "bool";
+      int = "int";
+      float = "float";
+      oneOf = members: {
+        kind = "oneOf";
+        inherit members;
+      };
       enum = values: {
         kind = "enum";
         inherit values;
@@ -162,8 +169,13 @@ let
         "with" = {
           root_file = "manual.tex";
           working_directory = "services/manual/docs";
+          latexmk_use_xelatex = true;
         };
-        env.TEXINPUTS = ".:./styles//:";
+        env = {
+          TEXINPUTS = ".:./styles//:";
+          RETRY_COUNT = 3;
+          SCALE = 1.5;
+        };
       }
     ];
     beforeSiteBuild = [
@@ -374,7 +386,15 @@ let
     &&
       stepOptions."with".testType == {
         kind = "attrs";
-        element = "str";
+        element = {
+          kind = "oneOf";
+          members = [
+            "str"
+            "bool"
+            "int"
+            "float"
+          ];
+        };
       }
     && stepOptions."with".default == { }
     && stepOptions.run.testType == "str"
@@ -383,7 +403,15 @@ let
     &&
       stepOptions.env.testType == {
         kind = "attrs";
-        element = "str";
+        element = {
+          kind = "oneOf";
+          members = [
+            "str"
+            "bool"
+            "int"
+            "float"
+          ];
+        };
       }
     && stepOptions.env.default == { }
     && stepOptions.working-directory.testType == "str"
@@ -395,7 +423,7 @@ let
     in
     builtins.all (pattern: matches pattern text) [
       "[.]github/workflows/docs-site[.]yml.*services/manual/docs/[*][*]"
-      "actions/checkout@v4.*Build the manual PDF.*xu-cheng/latex-action@v4.*root_file.*manual[.]tex.*working_directory.*services/manual/docs.*TEXINPUTS.*actions/setup-node@v4"
+      "actions/checkout@v4.*Build the manual PDF.*xu-cheng/latex-action@v4.*latexmk_use_xelatex: true.*root_file.*manual[.]tex.*working_directory.*services/manual/docs.*RETRY_COUNT: 3.*SCALE: 1[.]5.*TEXINPUTS.*actions/setup-node@v4"
       "npm ci.*Copy the manual PDF.*mkdir -p static/manual.*PDF_SOURCE.*working-directory.*apps/documentation.*npm run build"
       "npm run build.*Check the first output.*Check the second output.*actions/upload-pages-artifact@v3"
     ];
@@ -462,6 +490,7 @@ let
       "static-directories"
       "workflow.build.before-node-setup"
       "xu-cheng/latex-action@v4"
+      "latexmk_use_xelatex = true"
       "docusaurus.config.local.js"
       "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK"
       "Google Chat incoming webhooks"

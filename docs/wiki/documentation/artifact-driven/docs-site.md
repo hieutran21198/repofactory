@@ -65,6 +65,7 @@ factory.composition.artifact-driven.docs-site = {
         "with" = {
           root_file = "manual.tex";
           working_directory = "services/manual/docs";
+          latexmk_use_xelatex = true;
         };
       }
     ];
