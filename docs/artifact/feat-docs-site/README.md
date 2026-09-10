@@ -1,6 +1,6 @@
 # Feature: Documentation site
 
-**Current version:** 4.0.2
+**Current version:** 4.0.3
 
 ## Summary
 
@@ -12,9 +12,9 @@ project generate and publish static assets without replacing factory-owned files
 
 ## Current artifacts
 
-- [Requirements](versions/4.0.2/requirements/README.md)
-- [Specifications](versions/4.0.2/specifications/README.md)
-- [Decisions](versions/4.0.2/decisions/)
+- [Requirements](versions/4.0.3/requirements/README.md)
+- [Specifications](versions/4.0.3/specifications/README.md)
+- [Decisions](versions/4.0.3/decisions/)
 
 ## Versions
 
@@ -26,6 +26,7 @@ project generate and publish static assets without replacing factory-owned files
 | 4.0.0 | [Add generated asset extension points](changes/change-generated-asset-extension-points/README.md) | Requirements | 83da981..29d560b |
 | 4.0.1 | [Fix run-only workflow steps](changes/change-run-only-workflow-step/README.md) | Correction | eed7a31..c5654fa |
 | 4.0.2 | [Accept workflow step scalars](changes/change-workflow-step-scalars/README.md) | Correction | 81c8083..57b9f0c |
+| 4.0.3 | [Fix workflow watch path indentation](changes/change-workflow-watch-path-indent/README.md) | Correction | bbdc9be..1d441f5 |
 
 Versions from 3.0.0 have folders in `versions/`. The earlier versions were folded into 3.0.0 when
 the artifacts moved to the changes and versions layout. Read each change for the artifacts of that
