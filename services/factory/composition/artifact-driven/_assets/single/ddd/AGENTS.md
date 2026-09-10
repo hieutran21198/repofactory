@@ -10,8 +10,10 @@ Before you start work, read these pages:
 Keep the code in `src/`, the tests that start the complete component in `tests/`, and the
 deployment configuration in `deployment/`.
 
-Keep the requirements, the specifications, the decisions, and the tasks of each feature in
-`docs/artifact/`. Do the five phases in order. Commit at the end of each phase.
+Keep the artifacts of each feature in `docs/artifact/feat-<name>/`. Each unit of work is a change
+in `changes/change-<name>/`. Each version in `versions/<version>/` holds the full state of the
+feature. Read the current version for the state of a feature. Do the five phases in order. Commit
+at the end of each phase.
 
 Keep the domain model in `docs/domain/`. One bounded context is one directory in `src/`.
 Update the domain artifacts in the phase that owns them: the strategic design in phase 1, the

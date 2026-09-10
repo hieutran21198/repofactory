@@ -11,7 +11,7 @@ of this chapter with the procedure above.
 
 ### Procedure
 
-Do these steps after step 3 of the procedure above.
+Do these steps after step 7 of the procedure above.
 
 1. Name the subdomain of the need. Ask the user: "Does this part of the business give an
    advantage over the competition?" and "Can you buy a product for it?". Classify the subdomain

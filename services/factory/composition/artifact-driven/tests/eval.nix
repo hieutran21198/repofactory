@@ -516,9 +516,51 @@ let
     ".*## Rules.*"
     ".*services/.*src/.*"
     ".*requirement expert.*phase 1.*"
-    ".*solution expert.*phases 2 and 3.*"
+    ".*solution expert.*phases 2, 3, and 5.*"
     ".*Do not change.*"
   ];
+  # The roles, the guidance, and the skills describe the change and version model.
+  agentsSources = [
+    ../_assets/multiple/AGENTS.md
+    ../_assets/multiple/ddd/AGENTS.md
+    ../_assets/single/AGENTS.md
+    ../_assets/single/ddd/AGENTS.md
+  ];
+  dddPageSources = [
+    ../_assets/multiple/ddd/docs/wiki/design/ddd/artifact-driven.md
+    ../_assets/single/ddd/docs/wiki/design/ddd/artifact-driven.md
+  ];
+  matchesAll = patterns: text: builtins.all (pattern: builtins.match pattern text != null) patterns;
+
+  rolesNameVersions = builtins.all (
+    role:
+    matchesAll [
+      ".*versions/<current>.*"
+      ".*changes/change-<name>.*"
+    ] (base role)
+  ) roles;
+  solutionExpertHasPhaseFive =
+    builtins.match ".*## Procedure: phase 5, version.*" (base "solution-expert") != null;
+  requirementExpertHasNoLegacyProcedure =
+    builtins.match ".*## Change to a feature whose code exists.*" (base "requirement-expert") == null;
+  roleTemplateHasNoRootTasks =
+    builtins.match ".*feat-<name>/tasks/.*" (skillText "references/role-template.md") == null;
+  agentsNameVersions = builtins.all (
+    source:
+    matchesAll [
+      ".*versions/.*"
+      ".*changes/change-<name>.*"
+    ] (builtins.readFile source)
+  ) agentsSources;
+  dddPageHasVersionRow = builtins.all (
+    source:
+    builtins.match ".*\\| 5 Version \\| Solution expert \\|.*" (builtins.readFile source) != null
+  ) dddPageSources;
+  dddReviewNamesPhaseFive =
+    builtins.match ".*solution expert.*phases 2, 3, and 5.*" dddReviewText != null;
+  descriptions =
+    builtins.match ".*phases 2, 3, and 5.*" configs.multipleOn.factory.domain.agent.role.builder.solution-expert.description
+    != null;
 
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
@@ -573,6 +615,14 @@ assert dddReviewOmitted;
 assert dddReviewFileExists;
 assert dddReviewFrontmatter;
 assert dddReviewContent;
+assert rolesNameVersions;
+assert solutionExpertHasPhaseFive;
+assert requirementExpertHasNoLegacyProcedure;
+assert roleTemplateHasNoRootTasks;
+assert agentsNameVersions;
+assert dddPageHasVersionRow;
+assert dddReviewNamesPhaseFive;
+assert descriptions;
 {
   inherit
     sourcesMatch
@@ -609,5 +659,13 @@ assert dddReviewContent;
     dddReviewFileExists
     dddReviewFrontmatter
     dddReviewContent
+    rolesNameVersions
+    solutionExpertHasPhaseFive
+    requirementExpertHasNoLegacyProcedure
+    roleTemplateHasNoRootTasks
+    agentsNameVersions
+    dddPageHasVersionRow
+    dddReviewNamesPhaseFive
+    descriptions
     ;
 }

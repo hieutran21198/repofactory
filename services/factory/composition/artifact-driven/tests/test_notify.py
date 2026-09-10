@@ -31,8 +31,8 @@ def result(artifacts=None):
             },
             {
                 "change": "renamed",
-                "path": "docs/artifact/feat-login/tasks/task-new.md",
-                "previousPath": "docs/artifact/feat-login/tasks/task-old.md",
+                "path": "docs/artifact/feat-login/changes/change-initial/tasks/task-new.md",
+                "previousPath": "docs/artifact/feat-login/changes/change-initial/tasks/task-old.md",
                 "url": "https://tracker.example/two",
             },
         ],
@@ -65,7 +65,7 @@ class NotificationTest(unittest.TestCase):
         message = MODULE.build_message(result())
         self.assertIn("owner/repository#21", message)
         self.assertIn("ADDED: docs/artifact/feat-login/README.md", message)
-        self.assertIn("task-old.md -> docs/artifact/feat-login/tasks/task-new.md", message)
+        self.assertIn("task-old.md -> docs/artifact/feat-login/changes/change-initial/tasks/task-new.md", message)
         self.assertIn("https://tracker.example/two", message)
 
     def test_empty_result_has_no_message(self):

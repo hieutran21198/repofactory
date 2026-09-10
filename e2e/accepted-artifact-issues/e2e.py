@@ -597,20 +597,47 @@ def retry_check(
 
 
 def artifact_metadata(path: str) -> tuple[str, str | None]:
+    """Classify a feature artifact path into its kind and its parent path.
+
+    The classification follows spec-e2e-fixtures. A root-level artifact folder and a
+    ``versions/`` path are not artifacts and raise ``CheckError``.
+    """
     source = Path(path)
     root = "/".join(source.parts[:3])
     relative = source.parts[3:]
     if relative == ("README.md",):
         return "feature-summary", None
-    if relative == ("requirements", "README.md"):
-        return "master-requirement", f"{root}/README.md"
-    if relative[0:1] == ("requirements",) and source.name.startswith("req-"):
-        return "requirement", f"{root}/requirements/README.md"
-    if relative == ("tasks", "README.md"):
-        return "implementation-plan", f"{root}/README.md"
-    if relative[0:1] == ("tasks",) and source.name.startswith("task-"):
-        return "task", f"{root}/tasks/README.md"
-    raise CheckError(f"The Trello check cannot classify {path}")
+    if len(relative) >= 3 and relative[0] == "changes" and relative[1].startswith("change-"):
+        change = f"{root}/changes/{relative[1]}"
+        rest = relative[2:]
+        if rest == ("README.md",):
+            return "change-summary", f"{root}/README.md"
+        if rest == ("requirements", "README.md"):
+            return "master-requirement", f"{change}/README.md"
+        if len(rest) == 2 and rest[0] == "requirements" and rest[1].startswith("req-"):
+            return "requirement", f"{change}/requirements/README.md"
+        if rest == ("tasks", "README.md"):
+            return "implementation-plan", f"{change}/README.md"
+        if len(rest) == 2 and rest[0] == "tasks" and rest[1].startswith("task-"):
+            return "task", f"{change}/tasks/README.md"
+    raise CheckError(f"The live check cannot classify {path}")
+
+
+def provider_items(inspector: Any) -> dict[str, dict[str, Any]]:
+    return inspector.issues() if isinstance(inspector, GitHubInspector) else inspector.cards()
+
+
+def assert_no_managed_comment(repository: str, number: int) -> None:
+    for comment in pull_comments(repository, number):
+        if MANAGED_COMMENT in (comment.get("body") or ""):
+            raise CheckError(f"Pull request {number} must not have a managed comment")
+
+
+def assert_no_version_items(inspector: Any, scenario: Scenario) -> None:
+    prefix = f"{scenario.root}/versions/"
+    for path in provider_items(inspector):
+        if path.startswith(prefix):
+            raise CheckError(f"The provider has an item for the version file {path}")
 
 
 class GitHubInspector:
@@ -890,6 +917,7 @@ def new_scenario(provider: str, state: dict[str, Any]) -> Scenario:
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
     feature = f"feat-e2e-{provider}-{run_id}"
     root = f"docs/artifact/{feature}"
+    change = f"{root}/changes/change-initial"
     return Scenario(
         provider=provider,
         repository=repository_path(provider),
@@ -899,10 +927,11 @@ def new_scenario(provider: str, state: dict[str, Any]) -> Scenario:
         root=root,
         paths={
             "feature": f"{root}/README.md",
-            "requirements": f"{root}/requirements/README.md",
-            "requirement": f"{root}/requirements/req-first.md",
-            "tasks": f"{root}/tasks/README.md",
-            "task": f"{root}/tasks/task-run.md",
+            "change": f"{change}/README.md",
+            "requirements": f"{change}/requirements/README.md",
+            "requirement": f"{change}/requirements/req-first.md",
+            "tasks": f"{change}/tasks/README.md",
+            "task": f"{change}/tasks/task-run.md",
         },
     )
 
@@ -910,10 +939,21 @@ def new_scenario(provider: str, state: dict[str, Any]) -> Scenario:
 def artifact_files(scenario: Scenario) -> dict[str, str]:
     return {
         scenario.paths["feature"]: f"# Feature: E2E {scenario.run_id}\n",
+        scenario.paths["change"]: "# Change: Initial\n",
         scenario.paths["requirements"]: "# Requirements: E2E provider check\n",
         scenario.paths["requirement"]: "# req-first: Check the provider\n",
         scenario.paths["tasks"]: "# Implementation plan: E2E provider check\n",
         scenario.paths["task"]: "# task-run: Run the provider check\n",
+    }
+
+
+def version_files(scenario: Scenario) -> dict[str, str]:
+    """The version snapshot: a copy of the change requirements under ``versions/1.0.0/``."""
+    files = artifact_files(scenario)
+    version = f"{scenario.root}/versions/1.0.0"
+    return {
+        f"{version}/requirements/README.md": files[scenario.paths["requirements"]],
+        f"{version}/requirements/req-first.md": files[scenario.paths["requirement"]],
     }
 
 
@@ -945,6 +985,7 @@ def expected_statuses(scenario: Scenario, requirement_path: str | None = None) -
     paths = scenario.paths
     result = {
         paths["feature"]: "Accepted",
+        paths["change"]: "Accepted",
         paths["requirements"]: "Accepted",
         requirement_path or paths["requirement"]: "Accepted",
         paths["tasks"]: "Accepted",
@@ -1034,15 +1075,33 @@ def run_provider(provider: str, state: dict[str, Any]) -> dict[str, Any]:
         delete_branch(scenario.repository, pull["test_branch"])
         expected = expected_statuses(scenario)
         identities = inspector.assert_items(expected)
-        inspector.assert_link(scenario.paths["feature"], scenario.paths["requirements"])
+        inspector.assert_link(scenario.paths["feature"], scenario.paths["change"])
+        inspector.assert_link(scenario.paths["change"], scenario.paths["requirements"])
         inspector.assert_link(scenario.paths["requirements"], scenario.paths["requirement"])
-        inspector.assert_link(scenario.paths["feature"], scenario.paths["tasks"])
+        inspector.assert_link(scenario.paths["change"], scenario.paths["tasks"])
         inspector.assert_link(scenario.paths["tasks"], scenario.paths["task"])
         assert_body_links(inspector, scenario, scenario.paths["requirement"], sha, pull["html_url"])
         assert_managed_comment(scenario.repository, pull["number"], list(expected))
         create_result.update({"pull": pull, "run": run, "identities": identities})
 
     record("create artifact tree", create_tree)
+
+    def version_snapshot() -> None:
+        pull = create_pull(scenario, "version", version_files(scenario))
+        _, started = merge_pull_request(scenario.repository, pull)
+        run = wait_for_workflow(
+            scenario.repository, "pull_request_target", started, pull["number"]
+        )
+        if run["conclusion"] != "success":
+            raise CheckError(
+                f"Workflow {run['html_url']} ended with {run['conclusion']}, not success"
+            )
+        assert_no_version_items(inspector, scenario)
+        inspector.assert_items(expected_statuses(scenario), create_result["identities"])
+        assert_no_managed_comment(scenario.repository, pull["number"])
+        delete_branch(scenario.repository, pull["test_branch"])
+
+    record("version snapshot", version_snapshot)
 
     def rerun() -> None:
         run = create_result["run"]
@@ -1085,7 +1144,7 @@ def run_provider(provider: str, state: dict[str, Any]) -> dict[str, Any]:
 
     record("update and preserve status", update_artifact)
 
-    renamed = f"{scenario.root}/requirements/req-renamed.md"
+    renamed = f"{scenario.root}/changes/change-initial/requirements/req-renamed.md"
 
     def rename_artifact() -> None:
         content = artifact_files(scenario)[scenario.paths["requirement"]]
@@ -1132,27 +1191,19 @@ def run_provider(provider: str, state: dict[str, Any]) -> dict[str, Any]:
     record("withdraw artifact", delete_artifact)
 
     def cleanup_tree() -> None:
-        remaining = {
-            path: None
-            for path in artifact_files(scenario)
-            if path != scenario.paths["requirement"]
-        }
+        artifact_paths = [
+            path for path in artifact_files(scenario) if path != scenario.paths["requirement"]
+        ] + [renamed]
+        remaining: dict[str, str | None] = {path: None for path in artifact_paths}
+        remaining.update({path: None for path in version_files(scenario)})
         pull = create_pull(scenario, "cleanup", remaining)
         _, started = merge_pull_request(scenario.repository, pull)
         wait_for_workflow(scenario.repository, "pull_request_target", started, pull["number"])
         delete_branch(scenario.repository, pull["test_branch"])
-        items = inspector.issues() if isinstance(inspector, GitHubInspector) else inspector.cards()
-        expected = {
-            path: "Withdrawn"
-            for path in [
-                scenario.paths["feature"],
-                scenario.paths["requirements"],
-                renamed,
-                scenario.paths["tasks"],
-                scenario.paths["task"],
-            ]
-        }
+        items = provider_items(inspector)
+        expected = {path: "Withdrawn" for path in artifact_paths}
         inspector.assert_items(expected, create_result["identities"])
+        assert_no_version_items(inspector, scenario)
         for path, item in items.items():
             if not path.startswith(scenario.root):
                 continue

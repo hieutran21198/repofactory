@@ -8,5 +8,7 @@ Before you start work, read these pages:
 Keep the implementation artifacts and the local rules of each component in its own directory.
 The directory is in `apps/`, `services/`, `libs/`, `deployment/`, or `e2e/`.
 
-Keep the requirements, the specifications, the decisions, and the tasks of each feature in
-`docs/artifact/`. Do the five phases in order. Commit at the end of each phase.
+Keep the artifacts of each feature in `docs/artifact/feat-<name>/`. Each unit of work is a change
+in `changes/change-<name>/`. Each version in `versions/<version>/` holds the full state of the
+feature. Read the current version for the state of a feature. Do the five phases in order. Commit
+at the end of each phase.

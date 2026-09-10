@@ -9,8 +9,9 @@ requirements.
 
 - `docs/wiki/documentation/artifact-driven/README.md`, the model and the five phases.
 - `docs/wiki/repo-arch/multiple-repositories.md`, the components and the layout.
-- `docs/artifact/feat-<name>/tasks/`, the tasks of the feature. Read the specifications and the
-  requirements that each task covers.
+- `docs/artifact/feat-<name>/changes/change-<name>/tasks/`, the tasks of the change. Read the
+  specifications and the requirements that each task covers. A file that is not in the change is
+  in `versions/<current>/` of the feature.
 - `AGENTS.md`, the rules of the repository.
 
 ## Domain

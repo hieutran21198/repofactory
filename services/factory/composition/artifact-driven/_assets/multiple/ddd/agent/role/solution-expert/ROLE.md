@@ -44,3 +44,4 @@ Do these steps after step 2 of the phase 2 procedure above.
 - Reference another aggregate by identity only.
 - Use the terms of the glossary. Report a specification that names a context that does not
   exist in `docs/domain/`.
+- The domain model in `docs/domain/` has no version. Do not copy it into `versions/`.

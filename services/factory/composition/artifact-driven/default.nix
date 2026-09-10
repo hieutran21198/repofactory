@@ -264,8 +264,8 @@ in
               };
 
               builtinRoles = {
-                requirement-expert = mkRole "requirement-expert" "Gathers the business need and writes the requirements of a feature. Owns phase 1 of the artifact-driven documentation model. Use when a new feature starts, or when the requirements of a feature change.";
-                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2 and 3 of the artifact-driven documentation model. Works with the implementation expert of each component that the solution touches.";
+                requirement-expert = mkRole "requirement-expert" "Gathers the business need and writes the change summary and the requirements of a feature. Owns phase 1 of the artifact-driven documentation model. Use when a new feature starts, or when a change to a feature starts.";
+                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2, 3, and 5 of the artifact-driven documentation model. Keeps the versions of each feature. Works with the implementation expert of each component that the solution touches.";
               };
 
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;

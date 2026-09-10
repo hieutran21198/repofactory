@@ -69,7 +69,7 @@ The full text of the template:
 ```
 
 In phase 5, the line `**Current version:** none` becomes
-`**Current version:** [<version>](versions/<version>/)`, and the solution expert adds the section
+`**Current version:** <version>` (text, not a link; see spec-artifact-layout), and the solution expert adds the section
 `## Current artifacts` before `## Versions` with the links of spec-artifact-layout. The template has
 no `## Current artifacts` section, because the section exists only after the first version.
 

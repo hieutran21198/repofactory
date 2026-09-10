@@ -82,6 +82,11 @@ class PureFunctionTest(unittest.TestCase):
         self.assertEqual(set(files), set(statuses))
         self.assertEqual("Ready", statuses[scenario.paths["task"]])
         self.assertEqual("Accepted", statuses[scenario.paths["feature"]])
+        self.assertEqual("Accepted", statuses[scenario.paths["change"]])
+        self.assertEqual("# Change: Initial\n", files[scenario.paths["change"]])
+        for key, path in scenario.paths.items():
+            if key != "feature":
+                self.assertIn("/changes/change-initial/", path, key)
 
     def test_classifies_trello_description_metadata(self):
         root = "docs/artifact/feat-a"
@@ -90,9 +95,19 @@ class PureFunctionTest(unittest.TestCase):
             MODULE.artifact_metadata(f"{root}/README.md"),
         )
         self.assertEqual(
-            ("requirement", f"{root}/requirements/README.md"),
-            MODULE.artifact_metadata(f"{root}/requirements/req-a.md"),
+            ("change-summary", f"{root}/README.md"),
+            MODULE.artifact_metadata(f"{root}/changes/change-initial/README.md"),
         )
+        self.assertEqual(
+            ("requirement", f"{root}/changes/change-initial/requirements/README.md"),
+            MODULE.artifact_metadata(
+                f"{root}/changes/change-initial/requirements/req-a.md"
+            ),
+        )
+        with self.assertRaises(MODULE.CheckError):
+            MODULE.artifact_metadata(f"{root}/requirements/req-a.md")
+        with self.assertRaises(MODULE.CheckError):
+            MODULE.artifact_metadata(f"{root}/versions/1.0.0/requirements/req-a.md")
 
     def test_retries_a_provider_assertion(self):
         attempts = []

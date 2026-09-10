@@ -120,8 +120,9 @@ The domain model in `docs/domain/` has no version. No file of `docs/domain/` is 
 The feature README `docs/artifact/feat-<name>/README.md` has these parts in this order:
 
 1. The title `# Feature: <title>`.
-2. The line `**Current version:** [<version>](versions/<version>/)`. Before the first phase 5 the
-   line is `**Current version:** none`.
+2. The line `**Current version:** <version>`. The version is text, not a link: the site builder
+   reads a path such as `versions/1.0.0/` as a file with the extension `.0`. Before the first
+   phase 5 the line is `**Current version:** none`.
 3. The section `## Summary`.
 4. The section `## Current artifacts` with links to `versions/<version>/requirements/README.md`,
    `versions/<version>/specifications/README.md`, and `versions/<version>/decisions/` when the

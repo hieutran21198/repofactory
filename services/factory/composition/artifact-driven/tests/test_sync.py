@@ -1,15 +1,19 @@
 import importlib.util
 import os
+import re
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 SCRIPT = Path(__file__).parents[1] / "_assets" / "project-issues" / "sync.py"
 SPEC = importlib.util.spec_from_file_location("artifact_issue_sync", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+
+INITIAL = "docs/artifact/feat-login/changes/change-initial"
 
 
 class ArtifactClassificationTest(unittest.TestCase):
@@ -28,34 +32,35 @@ class ArtifactClassificationTest(unittest.TestCase):
 
     def test_requirement_tree(self):
         self.assert_artifact(
-            "docs/artifact/feat-login/requirements/README.md",
+            f"{INITIAL}/requirements/README.md",
             "master-requirement",
-            "docs/artifact/feat-login/README.md",
+            f"{INITIAL}/README.md",
         )
         self.assert_artifact(
-            "docs/artifact/feat-login/requirements/req-password.md",
+            f"{INITIAL}/requirements/req-password.md",
             "requirement",
-            "docs/artifact/feat-login/requirements/README.md",
+            f"{INITIAL}/requirements/README.md",
         )
 
     def test_specification_and_task_tree(self):
         self.assert_artifact(
-            "docs/artifact/feat-login/specifications/spec-api.md",
+            f"{INITIAL}/specifications/spec-api.md",
             "specification",
-            "docs/artifact/feat-login/specifications/README.md",
+            f"{INITIAL}/specifications/README.md",
         )
 
     def test_decision_uses_related_specification_as_parent(self):
-        path = "docs/artifact/feat-accepted-artifact-issues/decisions/adr-accepted-only.md"
+        change = "docs/artifact/feat-accepted-artifact-issues/changes/change-initial"
+        with mock.patch.object(MODULE, "related_specification", return_value="spec-sync-workflow"):
+            self.assert_artifact(
+                f"{change}/decisions/adr-accepted-only.md",
+                "decision",
+                f"{change}/specifications/spec-sync-workflow.md",
+            )
         self.assert_artifact(
-            path,
-            "decision",
-            "docs/artifact/feat-accepted-artifact-issues/specifications/spec-sync-workflow.md",
-        )
-        self.assert_artifact(
-            "docs/artifact/feat-login/tasks/task-api.md",
+            f"{INITIAL}/tasks/task-api.md",
             "task",
-            "docs/artifact/feat-login/tasks/README.md",
+            f"{INITIAL}/tasks/README.md",
         )
 
     def test_change_tree(self):
@@ -74,6 +79,29 @@ class ArtifactClassificationTest(unittest.TestCase):
             "task",
             "docs/artifact/feat-login/changes/change-lockout/tasks/README.md",
         )
+
+    def test_change_initial_is_an_ordinary_change(self):
+        for change in (INITIAL, "docs/artifact/feat-login/changes/change-lockout"):
+            self.assert_artifact(
+                f"{change}/README.md",
+                "change-summary",
+                "docs/artifact/feat-login/README.md",
+            )
+            self.assert_artifact(
+                f"{change}/specifications/README.md",
+                "master-specification",
+                f"{change}/README.md",
+            )
+            self.assert_artifact(
+                f"{change}/specifications/spec-api.md",
+                "specification",
+                f"{change}/specifications/README.md",
+            )
+            self.assert_artifact(
+                f"{change}/tasks/README.md",
+                "implementation-plan",
+                f"{change}/README.md",
+            )
 
     def test_global_index_and_code_are_not_artifacts(self):
         self.assertIsNone(MODULE.classify_artifact("docs/artifact/README.md"))
@@ -96,9 +124,7 @@ class ArtifactClassificationTest(unittest.TestCase):
         self.assertIn("repofactory:artifact:owner/repo:docs/artifact/feat-login/README.md", body)
 
     def test_body_has_parent_path_and_link(self):
-        artifact = MODULE.classify_artifact(
-            "docs/artifact/feat-login/requirements/req-password.md"
-        )
+        artifact = MODULE.classify_artifact(f"{INITIAL}/requirements/req-password.md")
         body = MODULE.artifact_body(
             artifact,
             "owner/repo",
@@ -109,7 +135,7 @@ class ArtifactClassificationTest(unittest.TestCase):
             "https://trello.com/c/parent",
         )
         self.assertIn(
-            "Parent artifact: [`docs/artifact/feat-login/requirements/README.md`]"
+            f"Parent artifact: [`{INITIAL}/requirements/README.md`]"
             "(https://trello.com/c/parent)",
             body,
         )
@@ -129,7 +155,7 @@ class QueueApi:
 
 class GitHubAdapterTest(unittest.TestCase):
     def test_upsert_replaces_managed_label_and_preserves_user_label(self):
-        path = "docs/artifact/feat-login/requirements/req-password.md"
+        path = f"{INITIAL}/requirements/req-password.md"
         artifact = MODULE.classify_artifact(path)
         updated = {
             "id": 7,
@@ -157,6 +183,23 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual("PATCH", method)
         self.assertIn("/repos/owner/repo/issues/3", url)
         self.assertEqual(["user-label", "artifact:requirement"], payload["labels"])
+
+    def test_link_sends_replace_parent(self):
+        api = QueueApi([[], None])
+        adapter = MODULE.GitHubAdapter(
+            {"ownership": "personal", "owner": "owner", "projectNumber": 1},
+            "owner/repo",
+            api,
+        )
+        parent = MODULE.IssueRef(3, "https://github.example/owner/repo/issues/3", False)
+        child = MODULE.IssueRef(7, "https://github.example/owner/repo/issues/7", True)
+
+        adapter.link(parent, child)
+
+        method, url, payload = api.requests[1]
+        self.assertEqual("POST", method)
+        self.assertTrue(url.endswith("/repos/owner/repo/issues/3/sub_issues"))
+        self.assertEqual({"sub_issue_id": 7, "replace_parent": True}, payload)
 
 
 class TrelloAdapterTest(unittest.TestCase):
@@ -310,7 +353,7 @@ class TrelloAdapterTest(unittest.TestCase):
         self.assertEqual("planning", adapter.board_for("change-summary"))
 
     def test_upsert_moves_existing_task_and_keeps_identity(self):
-        path = "docs/artifact/feat-login/tasks/task-api.md"
+        path = f"{INITIAL}/tasks/task-api.md"
         artifact = MODULE.classify_artifact(path)
         moved = {
             "id": "card",
@@ -347,9 +390,10 @@ class FakeAdapter:
         self.upserts = []
         self.links = []
         self.existing = {}
+        self.preflights = 0
 
     def preflight(self, statuses):
-        return None
+        self.preflights += 1
 
     def lookup(self, path):
         return self.existing.get(path)
@@ -390,49 +434,85 @@ class SynchronizerTest(unittest.TestCase):
         else:
             os.environ["ARTIFACT_ISSUES_RESULT"] = self.old_result
 
-    def test_sync_builds_parent_chain_before_leaf(self):
-        adapter = FakeAdapter()
-        sync = MODULE.Synchronizer(
+    def make_sync(self, adapter, event=None):
+        return MODULE.Synchronizer(
             {"provider": "fake", "statuses": self.statuses},
-            {"repository": {"default_branch": "main"}},
+            event or {"repository": {"default_branch": "main"}},
             adapter=adapter,
         )
-        leaf = "docs/artifact/feat-accepted-artifact-issues/requirements/req-accepted-only.md"
+
+    def run_changes(self, changes):
+        """Run the synchronizer on a fixed list of changed files and return the adapter and result."""
+        adapter = FakeAdapter()
+
+        class TestSynchronizer(MODULE.Synchronizer):
+            def changed_files(self):
+                return changes
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result.json"
+            os.environ["ARTIFACT_ISSUES_RESULT"] = str(output)
+            sync = TestSynchronizer(
+                {"provider": "fake", "statuses": self.statuses},
+                {"repository": {"default_branch": "main"}},
+                adapter=adapter,
+            )
+            sync.run()
+            result = MODULE.json.loads(output.read_text())
+        return adapter, result
+
+    def run_manual_scan(self, files):
+        """Run the manual full scan on a temporary tree that holds the given files."""
+        adapter = FakeAdapter()
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as directory:
+            for path in files:
+                target = Path(directory) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("# Title\n")
+            output = Path(directory) / "result.json"
+            os.environ["ARTIFACT_ISSUES_RESULT"] = str(output)
+            os.chdir(directory)
+            try:
+                self.make_sync(adapter).run()
+            finally:
+                os.chdir(cwd)
+            result = MODULE.json.loads(output.read_text())
+        return adapter, result
+
+    def test_sync_builds_parent_chain_before_leaf(self):
+        adapter = FakeAdapter()
+        sync = self.make_sync(adapter)
+        change = "docs/artifact/feat-accepted-artifact-issues/changes/change-initial"
+        leaf = f"{change}/requirements/req-accepted-only.md"
         sync.sync_path(leaf)
         self.assertEqual(
             [
                 "docs/artifact/feat-accepted-artifact-issues/README.md",
-                "docs/artifact/feat-accepted-artifact-issues/requirements/README.md",
+                f"{change}/README.md",
+                f"{change}/requirements/README.md",
                 leaf,
             ],
             [item[0] for item in adapter.upserts],
         )
-        self.assertEqual(2, len(adapter.links))
+        self.assertEqual(3, len(adapter.links))
 
     def test_withdraw_uses_configured_status(self):
         adapter = FakeAdapter()
-        sync = MODULE.Synchronizer(
-            {"provider": "fake", "statuses": self.statuses},
-            {"repository": {"default_branch": "main"}},
-            adapter=adapter,
-        )
-        sync.withdraw_path("docs/artifact/feat-login/tasks/task-api.md")
+        sync = self.make_sync(adapter)
+        sync.withdraw_path(f"{INITIAL}/tasks/task-api.md")
         self.assertEqual("Withdrawn", adapter.upserts[0][1])
         self.assertTrue(adapter.upserts[0][3])
 
     def test_withdraw_keeps_parent_description_metadata(self):
         adapter = FakeAdapter()
-        parent = "docs/artifact/feat-login/tasks/README.md"
+        parent = f"{INITIAL}/tasks/README.md"
         adapter.existing[parent] = MODULE.IssueRef(
             "parent", "https://trello.example/parent", False
         )
-        sync = MODULE.Synchronizer(
-            {"provider": "fake", "statuses": self.statuses},
-            {"repository": {"default_branch": "main"}},
-            adapter=adapter,
-        )
+        sync = self.make_sync(adapter)
 
-        sync.withdraw_path("docs/artifact/feat-login/tasks/task-api.md")
+        sync.withdraw_path(f"{INITIAL}/tasks/task-api.md")
 
         self.assertIn(
             f"Parent artifact: [`{parent}`](https://trello.example/parent)",
@@ -441,16 +521,15 @@ class SynchronizerTest(unittest.TestCase):
 
     def test_unchanged_parent_is_not_updated(self):
         adapter = FakeAdapter()
+        change = "docs/artifact/feat-accepted-artifact-issues/changes/change-initial"
         feature = "docs/artifact/feat-accepted-artifact-issues/README.md"
-        master = "docs/artifact/feat-accepted-artifact-issues/requirements/README.md"
+        summary = f"{change}/README.md"
+        master = f"{change}/requirements/README.md"
         adapter.existing[feature] = MODULE.IssueRef("feature", "https://tracker/feature", False)
+        adapter.existing[summary] = MODULE.IssueRef("summary", "https://tracker/summary", False)
         adapter.existing[master] = MODULE.IssueRef("master", "https://tracker/master", False)
-        sync = MODULE.Synchronizer(
-            {"provider": "fake", "statuses": self.statuses},
-            {"repository": {"default_branch": "main"}},
-            adapter=adapter,
-        )
-        leaf = "docs/artifact/feat-accepted-artifact-issues/requirements/req-accepted-only.md"
+        sync = self.make_sync(adapter)
+        leaf = f"{change}/requirements/req-accepted-only.md"
         sync.sync_path(leaf)
         self.assertEqual([leaf], [item[0] for item in adapter.upserts])
 
@@ -459,13 +538,19 @@ class SynchronizerTest(unittest.TestCase):
             def changed_files(self):
                 return [
                     {"filename": "docs/artifact/feat-added/README.md", "status": "added"},
-                    {"filename": "docs/artifact/feat-updated/requirements/README.md", "status": "modified"},
                     {
-                        "filename": "docs/artifact/feat-renamed/tasks/README.md",
-                        "previous_filename": "docs/artifact/feat-old/tasks/README.md",
+                        "filename": "docs/artifact/feat-updated/changes/change-initial/requirements/README.md",
+                        "status": "modified",
+                    },
+                    {
+                        "filename": "docs/artifact/feat-renamed/changes/change-initial/tasks/README.md",
+                        "previous_filename": "docs/artifact/feat-old/changes/change-initial/tasks/README.md",
                         "status": "renamed",
                     },
-                    {"filename": "docs/artifact/feat-removed/tasks/task-old.md", "status": "removed"},
+                    {
+                        "filename": "docs/artifact/feat-removed/changes/change-initial/tasks/task-old.md",
+                        "status": "removed",
+                    },
                 ]
 
             def comment_on_pull_request(self):
@@ -498,7 +583,10 @@ class SynchronizerTest(unittest.TestCase):
         )
         self.assertEqual(4, len(result["artifacts"]))
         renamed = next(item for item in result["artifacts"] if item["change"] == "renamed")
-        self.assertEqual("docs/artifact/feat-old/tasks/README.md", renamed["previousPath"])
+        self.assertEqual(
+            "docs/artifact/feat-old/changes/change-initial/tasks/README.md",
+            renamed["previousPath"],
+        )
 
     def test_run_writes_empty_result_without_provider_preflight(self):
         class TestSynchronizer(MODULE.Synchronizer):
@@ -518,6 +606,78 @@ class SynchronizerTest(unittest.TestCase):
 
             result = MODULE.json.loads(output.read_text())
         self.assertEqual([], result["artifacts"])
+
+    def test_root_level_folders_are_unsupported(self):
+        for legacy in (
+            "docs/artifact/feat-login/requirements/README.md",
+            "docs/artifact/feat-login/requirements/req-password.md",
+            "docs/artifact/feat-login/specifications/spec-api.md",
+            "docs/artifact/feat-login/decisions/adr-choice.md",
+            "docs/artifact/feat-login/tasks/README.md",
+            "docs/artifact/feat-login/tasks/task-api.md",
+        ):
+            self.assertTrue(MODULE.is_feature_markdown(legacy), legacy)
+            self.assertIsNone(MODULE.classify_artifact(legacy), legacy)
+        path = "docs/artifact/feat-login/requirements/req-password.md"
+        with self.assertRaisesRegex(RuntimeError, "Unsupported feature artifact paths: .*" + re.escape(path)):
+            self.run_changes([{"filename": path, "status": "modified"}])
+
+    def test_versions_are_ignored_in_pull_request(self):
+        paths = [
+            "docs/artifact/feat-login/versions/1.0.0/requirements/README.md",
+            "docs/artifact/feat-login/versions/1.0.0/specifications/spec-api.md",
+            "docs/artifact/feat-login/versions/1.0.0/decisions/adr-choice.md",
+        ]
+        for path in paths:
+            self.assertFalse(MODULE.is_feature_markdown(path), path)
+            self.assertIsNone(MODULE.classify_artifact(path), path)
+
+        adapter, result = self.run_changes([{"filename": path, "status": "added"} for path in paths])
+
+        self.assertEqual([], result["artifacts"])
+        self.assertEqual([], adapter.upserts)
+        self.assertEqual(0, adapter.preflights)
+
+    def test_versions_are_ignored_in_manual_scan(self):
+        adapter, result = self.run_manual_scan(
+            [
+                "docs/artifact/feat-login/versions/1.0.0/requirements/README.md",
+                "docs/artifact/feat-login/versions/1.0.0/requirements/req-password.md",
+            ]
+        )
+        self.assertEqual([], result["artifacts"])
+        self.assertEqual([], adapter.upserts)
+        self.assertEqual(0, adapter.preflights)
+
+    def test_unmigrated_tree_fails_manual_scan(self):
+        path = "docs/artifact/feat-login/requirements/README.md"
+        with self.assertRaisesRegex(RuntimeError, "Unsupported feature artifact paths: .*" + re.escape(path)):
+            self.run_manual_scan(["docs/artifact/feat-login/README.md", path])
+
+    def test_rename_from_root_path_keeps_identity(self):
+        legacy = "docs/artifact/feat-login/tasks/task-api.md"
+        current = f"{INITIAL}/tasks/task-api.md"
+
+        adapter, result = self.run_changes(
+            [{"filename": current, "previous_filename": legacy, "status": "renamed"}]
+        )
+
+        self.assertIn((current, "Ready", legacy, False), [item[:4] for item in adapter.upserts])
+        renamed = next(item for item in result["artifacts"] if item["change"] == "renamed")
+        self.assertEqual(current, renamed["path"])
+        self.assertEqual(legacy, renamed["previousPath"])
+
+    def test_removed_root_path_is_ignored(self):
+        adapter, result = self.run_changes(
+            [{"filename": "docs/artifact/feat-login/tasks/task-api.md", "status": "removed"}]
+        )
+        self.assertEqual([], adapter.upserts)
+        self.assertEqual([], result["artifacts"])
+
+    def test_unsupported_change_path_fails(self):
+        path = "docs/artifact/feat-login/changes/change-x/notes.md"
+        with self.assertRaisesRegex(RuntimeError, "Unsupported feature artifact paths: .*" + re.escape(path)):
+            self.run_changes([{"filename": path, "status": "added"}])
 
 
 if __name__ == "__main__":
