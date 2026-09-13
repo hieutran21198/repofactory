@@ -75,6 +75,8 @@ let
       title ? "Documentation",
       url ? "https://example.github.io",
       baseUrl ? "/repo/",
+      target ? "github-pages",
+      apiTokenSecret ? "DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN",
       notificationUses ? [ ],
       notificationGoogleChatSecret ? "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK",
       notificationSlackSecret ? "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK",
@@ -109,8 +111,14 @@ let
           ci-cd.provider.use = ciProvider;
         };
         composition.artifact-driven.docs-site = {
-          inherit enable title url;
+          inherit
+            enable
+            title
+            url
+            target
+            ;
           base-url = baseUrl;
+          azure-static-web-app.api-token-secret = apiTokenSecret;
           static-directories = staticDirectories;
           workflow = {
             watch-paths = workflowWatchPaths;
@@ -246,6 +254,75 @@ let
         run = "echo invalid";
       }
     ];
+  };
+  githubAzure = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+  };
+  azureSwa = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+  };
+  githubAzureCustomSecret = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    apiTokenSecret = "CUSTOM_SWA_TOKEN";
+  };
+  azureSwaCustomSecret = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    apiTokenSecret = "CUSTOM_SWA_TOKEN";
+  };
+  githubAzureMulti = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
+  };
+  azureSwaMulti = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
+  };
+  githubAzureExtensions = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    staticDirectories = extensionStaticDirectories;
+    workflowWatchPaths = extensionWatchPaths;
+    beforeNodeSetup = extensionBeforeNodeSetup;
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+  };
+  azureSwaExtensions = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    staticDirectories = extensionStaticDirectories;
+    workflowWatchPaths = extensionWatchPaths;
+    beforeNodeSetup = extensionBeforeNodeSetup;
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+  };
+  invalidTarget = evalModule {
+    enable = true;
+    target = "not-a-target";
+  };
+  invalidTokenSecret = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    apiTokenSecret = "invalid-secret";
   };
   off = evalModule { };
   single = evalModule {
@@ -571,6 +648,134 @@ let
     azureEmptyPath
     azureStepWithUsesAndRun
   ];
+  failedMessages =
+    cfg: map (a: a.message) (builtins.filter (a: !a.assertion) (cfg.assertions or [ ]));
+  targetOptionsMatch =
+    let
+      options = (moduleFor { }).options.factory.composition.artifact-driven.docs-site;
+    in
+    options.target.default == "github-pages"
+    && options.azure-static-web-app.api-token-secret.default == "DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN";
+  githubDefaultHasNoSwa =
+    let
+      text = on.files.".github/workflows/docs-site.yml".text;
+    in
+    !matches "static-web-apps-deploy" text && !matches "AzureStaticWebApp" text;
+  azureDefaultHasNoSwa =
+    let
+      text = azure.files.${azurePipelineFile}.text;
+    in
+    !matches "static-web-apps-deploy" text && !matches "AzureStaticWebApp" text;
+  githubAzureMatches =
+    let
+      text = githubAzure.files.".github/workflows/docs-site.yml".text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "Azure/static-web-apps-deploy@v1"
+      "app_location: apps/documentation"
+      "output_location: build"
+      "skip_app_build: true"
+      "secrets[.]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN"
+      "npm run build.*Deploy to Azure Static Web Apps"
+    ];
+  githubAzureCustomSecretMatches =
+    matches "secrets[.]CUSTOM_SWA_TOKEN"
+      githubAzureCustomSecret.files.".github/workflows/docs-site.yml".text;
+  githubAzureExcludesPages =
+    let
+      text = githubAzure.files.".github/workflows/docs-site.yml".text;
+    in
+    !matches "upload-pages-artifact" text
+    && !matches "deploy-pages" text
+    && !matches "pages: write" text
+    && !matches "github-pages" text;
+  githubAzureExtensionsMatch =
+    let
+      text = githubAzureExtensions.files.".github/workflows/docs-site.yml".text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "actions/checkout@v4.*Build the manual PDF.*xu-cheng/latex-action@v4.*actions/setup-node@v4"
+      "npm ci.*Copy the manual PDF.*npm run build"
+      "npm run build.*Check the first output.*Check the second output.*Deploy to Azure Static Web Apps"
+      "Azure/static-web-apps-deploy@v1"
+    ];
+  githubAzureSiteJsonIdentical =
+    githubAzure.files."${site}/site.json".text == on.files."${site}/site.json".text
+    &&
+      githubAzureExtensions.files."${site}/site.json".text == extensions.files."${site}/site.json".text;
+  githubAzureNotificationsMatch =
+    let
+      text = githubAzureMulti.files.".github/workflows/docs-site.yml".text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "[.]github/docs-site/notify[.]py"
+      "DOCS_SITE_NOTIFICATION_USES:.*google-chat.*slack.*telegram"
+      "DOCS_SITE_DEPLOYMENT_URL: \"https://example[.]github[.]io/repo/\""
+    ]
+    && !matches "steps[.]deployment[.]outputs[.]page_url" text
+    &&
+      githubAzureMulti.files.${notificationFile}.source == multiProvider.files.${notificationFile}.source;
+  azureSwaMatches =
+    let
+      text = azureSwa.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "AzureStaticWebApp@0"
+      "app_location: apps/documentation"
+      "output_location: build"
+      "skip_app_build: true"
+      "azure_static_web_apps_api_token: [$][(]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN[)]"
+      "npm run build.*Deploy to Azure Static Web Apps"
+    ];
+  azureSwaCustomSecretMatches =
+    matches "[$][(]CUSTOM_SWA_TOKEN[)]"
+      azureSwaCustomSecret.files.${azurePipelineFile}.text;
+  azureSwaExcludesGhPages =
+    let
+      text = azureSwa.files.${azurePipelineFile}.text;
+    in
+    !matches "gh-pages" text && !matches "DOCS_SITE_GITHUB_TOKEN" text;
+  azureSwaExtensionsMatch =
+    let
+      text = azureSwaExtensions.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "checkout: self.*Build the manual PDF.*NodeTool@0"
+      "Copy the manual PDF.*npm run build.*Check the first output.*Check the second output.*Deploy to Azure Static Web Apps"
+      "AzureStaticWebApp@0"
+    ];
+  azureSwaSiteJsonIdentical =
+    azureSwa.files."${site}/site.json".text == azure.files."${site}/site.json".text
+    &&
+      azureSwaExtensions.files."${site}/site.json".text == azureExtensions.files."${site}/site.json".text;
+  azureSwaNotificationsMatch =
+    let
+      text = azureSwaMulti.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "[.]github/docs-site/notify[.]py"
+      "DOCS_SITE_NOTIFICATION_USES:.*google-chat.*slack.*telegram"
+      "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: [$][(]DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK[)]"
+      "DOCS_SITE_DEPLOYMENT_URL: 'https://example[.]github[.]io/repo/'"
+    ]
+    &&
+      azureSwaMulti.files.${notificationFile}.source
+      == azureMultiProvider.files.${notificationFile}.source;
+  targetAssertionsPass =
+    assertionsPass githubAzure
+    && assertionsPass azureSwa
+    && assertionsPass githubAzureMulti
+    && assertionsPass azureSwaMulti
+    && assertionsPass githubAzureExtensions
+    && assertionsPass azureSwaExtensions;
+  invalidTargetRejected =
+    !assertionsPass invalidTarget
+    && builtins.all (
+      message:
+      builtins.match ".*github-pages.*" message != null
+      && builtins.match ".*azure-static-web-app.*" message != null
+    ) (failedMessages invalidTarget);
+  invalidTokenSecretRejected = !assertionsPass invalidTokenSecret;
   notificationFile = ".github/docs-site/notify.py";
   notificationOptionsMatch =
     let
@@ -637,6 +842,12 @@ let
       "Azure Pipelines"
       "azure-pipelines/docs-site[.]yml"
       "DOCS_SITE_GITHUB_TOKEN"
+      "azure-static-web-app"
+      "DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN"
+      "Create one Static Web App resource"
+      "Copy the deployment token"
+      "Mark the Azure variable as secret"
+      "cannot create the resource and cannot read the token"
     ];
   onAssertionsPass = assertionsPass on;
   notificationAssertionsPass = assertionsPass googleChat && assertionsPass slack;
@@ -674,6 +885,24 @@ assert azureEmptyExtensions;
 assert azureNotificationsMatch;
 assert azureAssertionsPass;
 assert azureInvalidRejected;
+assert targetOptionsMatch;
+assert githubDefaultHasNoSwa;
+assert azureDefaultHasNoSwa;
+assert githubAzureMatches;
+assert githubAzureCustomSecretMatches;
+assert githubAzureExcludesPages;
+assert githubAzureExtensionsMatch;
+assert githubAzureSiteJsonIdentical;
+assert githubAzureNotificationsMatch;
+assert azureSwaMatches;
+assert azureSwaCustomSecretMatches;
+assert azureSwaExcludesGhPages;
+assert azureSwaExtensionsMatch;
+assert azureSwaSiteJsonIdentical;
+assert azureSwaNotificationsMatch;
+assert targetAssertionsPass;
+assert invalidTargetRejected;
+assert invalidTokenSecretRejected;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
@@ -710,6 +939,24 @@ assert invalidSetupsRejected;
     azureNotificationsMatch
     azureAssertionsPass
     azureInvalidRejected
+    targetOptionsMatch
+    githubDefaultHasNoSwa
+    azureDefaultHasNoSwa
+    githubAzureMatches
+    githubAzureCustomSecretMatches
+    githubAzureExcludesPages
+    githubAzureExtensionsMatch
+    githubAzureSiteJsonIdentical
+    githubAzureNotificationsMatch
+    azureSwaMatches
+    azureSwaCustomSecretMatches
+    azureSwaExcludesGhPages
+    azureSwaExtensionsMatch
+    azureSwaSiteJsonIdentical
+    azureSwaNotificationsMatch
+    targetAssertionsPass
+    invalidTargetRejected
+    invalidTokenSecretRejected
     notificationOptionsMatch
     notificationFilesMatch
     notificationWorkflowsMatch

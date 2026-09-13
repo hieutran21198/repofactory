@@ -3,7 +3,7 @@
 The documentation site is a website that renders the `docs/` tree of the repository. The factory
 renders the site project at `apps/documentation/`. The project sets the options
 `factory.composition.artifact-driven.docs-site` in `devenv.local.nix`: `enable`, `title`, `url`,
-`base-url`, and `notification`. The shell renders the site project from these options.
+`base-url`, `target`, `azure-static-web-app.api-token-secret`, and `notification`. The shell renders the site project from these options.
 
 ## Run locally
 
@@ -24,13 +24,46 @@ The last command starts a local server and opens the website in the browser.
 
 The factory renders one CI pipeline for the selected CI provider. The provider `github-actions`
 renders `.github/workflows/docs-site.yml`. The provider `azure-pipelines` renders
-`azure-pipelines/docs-site.yml`. Each pipeline builds the website and publishes it to GitHub
-Pages on each push to the default branch. One manual step remains. In the repository settings,
+`azure-pipelines/docs-site.yml`. Each pipeline builds the website and publishes it to the
+selected target on each push to the default branch.
+
+The option `target` selects the hosting service. It accepts `github-pages` or
+`azure-static-web-app`. The default is `github-pages`. The site uses exactly one target.
+With no `target` value, the factory publishes the website to GitHub Pages.
+
+With `target = "github-pages"`, each pipeline publishes the website to GitHub
+Pages. One manual step remains. In the repository settings,
 under Pages, set the source to "GitHub Actions". Do this step one time.
 
 A push to another branch does not change the published website. A failed build does not change
 the published website. The Actions tab shows the failed run for `github-actions`. The pipeline
 run shows the failed run for `azure-pipelines`.
+
+## Publish to Azure Static Web Apps
+
+Set the target in `devenv.local.nix`:
+
+```nix
+factory.composition.artifact-driven.docs-site.target = "azure-static-web-app";
+```
+
+The option `azure-static-web-app.api-token-secret` names the secret that holds the Static Web
+App deployment token. The default is `DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN`. The workflow
+reads it from `${{ secrets.DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN }}`. The Azure pipeline
+reads it from the secret variable `$(DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN)`. Use a custom
+name only when the secret uses that name.
+
+Make these four manual steps outside the factory:
+
+1. Create one Static Web App resource in Azure for the site.
+2. Copy the deployment token of that resource.
+3. Store the token as a GitHub secret or as an Azure secret variable with the configured
+   secret name. Mark the Azure variable as secret.
+4. Set the docs-site `url` and `base-url` options to the Static Web App address.
+
+The factory cannot create the resource and cannot read the token. The generated pipeline
+builds the site with `npm run build` and uploads `apps/documentation/build` with
+`skip_app_build: true`. It never builds the site a second time.
 
 ## Set up Azure Pipelines
 
@@ -67,7 +100,7 @@ The build workflow has three step lists:
 | --- | --- |
 | `workflow.build.before-node-setup` | After checkout and before Node.js setup. |
 | `workflow.build.before-site-build` | After `npm ci` and before `npm run build`. |
-| `workflow.build.after-site-build` | After `npm run build` and before the Pages artifact upload. |
+| `workflow.build.after-site-build` | After `npm run build` and before publication. |
 
 A step supports `name`, `uses`, `with`, `run`, `env`, and `working-directory`. Set one of `uses`
 or `run`. A run step uses `apps/documentation/` as its default working directory. Azure
@@ -122,7 +155,7 @@ prevents a deployment.
 
 ## Set up deployment notifications
 
-The workflow can send one message to each selected provider after GitHub Pages deploys the site.
+The workflow can send one message to each selected provider after the selected target deploys the site.
 
 ```nix
 factory.composition.artifact-driven.docs-site.notification = {
@@ -161,7 +194,7 @@ run. The workflow sends a message after a successful push or manual deployment. 
 after a failed build or deployment.
 
 The notifier retries a temporary delivery failure two times. If all attempts fail, the workflow
-reports a failure, but GitHub Pages keeps the deployed site. A workflow rerun can send the message
+reports a failure, but the deployed site stays available. A workflow rerun can send the message
 again.
 
 ## Write pages that render
