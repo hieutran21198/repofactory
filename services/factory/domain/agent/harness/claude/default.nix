@@ -18,7 +18,7 @@
       inherit (agent.harness) claude;
     in
     lib.mkIf (builtins.elem "claude" agent.harness.uses) {
-      files.".claude/config.json" = {
+      files.".claude/settings.json" = {
         copyMode = "copy";
         json = {
           attribution = {

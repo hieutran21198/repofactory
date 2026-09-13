@@ -14,7 +14,7 @@ in
       description = "Path to skill folder; will be used for all harness tools";
       default = { };
     };
-    builtins = lib.genAttrs [ "asd-ste-100" ] (name: {
+    builtins = lib.genAttrs [ "asd-ste-100" "asd-ste-100-chat-no-slop" ] (name: {
       enable = _utils.mkBoolOpt {
         default = true;
         description = "Whether to enable the builtin skill ${name}";
