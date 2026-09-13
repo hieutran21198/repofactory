@@ -26,6 +26,10 @@ adapter but does not activate a composition.
 - An enabled documentation site composition needs the artifact-driven model, the multiple
   repositories architecture, and one selected CI provider (github-actions or azure-pipelines).
 - An enabled documentation site composition has a title, a site URL, and a base URL.
+- An enabled documentation site composition selects exactly one publication target.
+- The publication target is `github-pages` or `azure-static-web-app`.
+- The publication target is `github-pages` unless the maintainer selects `azure-static-web-app`.
+- A documentation site with the `azure-static-web-app` target names the secret that holds the Static Web App deployment token.
 - A documentation site extension adds typed static directories, watch paths, and build steps without replacing a factory-owned file.
 - An enabled deployment notification selects one or more supported notification providers and their settings.
 
