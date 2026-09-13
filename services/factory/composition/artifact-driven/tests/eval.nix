@@ -263,6 +263,11 @@ let
   roles = [
     "requirement-expert"
     "solution-expert"
+    "artifact-master"
+  ];
+  expertRoles = [
+    "requirement-expert"
+    "solution-expert"
   ];
   base = role: builtins.readFile (../_assets/agent/role + "/${role}/ROLE.md");
   chapter = arch: role: builtins.readFile (../_assets + "/${arch}/ddd/agent/role/${role}/ROLE.md");
@@ -561,6 +566,49 @@ let
   descriptions =
     builtins.match ".*phases 2, 3, and 5.*" configs.multipleOn.factory.domain.agent.role.builder.solution-expert.description
     != null;
+  coordinatorModeAll =
+    builtins.all
+      (cfg: cfg.factory.domain.agent.role.builder.artifact-master.harness.opencode.mode == "all")
+      [
+        configs.multipleOn
+        configs.singleOn
+      ];
+  expertsStaySubagent =
+    builtins.all
+      (
+        cfg:
+        builtins.all (
+          role: cfg.factory.domain.agent.role.builder.${role}.harness.opencode.mode == "subagent"
+        ) expertRoles
+      )
+      [
+        configs.multipleOn
+        configs.singleOn
+      ];
+
+  masterSkillPath = ../_assets/agent/skill/by-role/artifact-master/artifact-master;
+  masterSkillText = builtins.readFile (masterSkillPath + "/SKILL.md");
+  masterSkillShipped =
+    builtins.all (cfg: cfg.factory.domain.agent.skill.general.artifact-master == masterSkillPath)
+      [
+        configs.multipleOn
+        configs.multipleOff
+        configs.singleOn
+        configs.singleOff
+        noArchOn
+      ];
+  masterSkillFileExists = builtins.pathExists (masterSkillPath + "/SKILL.md");
+  masterSkillOmitted =
+    !(builtins.hasAttr "artifact-master" (documentationOff.factory.domain.agent.skill.general or { }));
+  masterSkillIsGeneric = builtins.all (
+    pattern: builtins.match pattern masterSkillText == null
+  ) forbidden;
+  masterSkillFrontmatter = builtins.match "---\nname: artifact-master\n.*" masterSkillText != null;
+  masterRoleCoordinates = matchesAll [
+    ".*coordinate-plan.*"
+    ".*Plan-Pn.*"
+    ".*Phase 4 has no Plan-P4.*"
+  ] (base "artifact-master");
 
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
@@ -623,6 +671,14 @@ assert agentsNameVersions;
 assert dddPageHasVersionRow;
 assert dddReviewNamesPhaseFive;
 assert descriptions;
+assert coordinatorModeAll;
+assert expertsStaySubagent;
+assert masterSkillShipped;
+assert masterSkillFileExists;
+assert masterSkillOmitted;
+assert masterSkillIsGeneric;
+assert masterSkillFrontmatter;
+assert masterRoleCoordinates;
 {
   inherit
     sourcesMatch
@@ -667,5 +723,13 @@ assert descriptions;
     dddPageHasVersionRow
     dddReviewNamesPhaseFive
     descriptions
+    coordinatorModeAll
+    expertsStaySubagent
+    masterSkillShipped
+    masterSkillFileExists
+    masterSkillOmitted
+    masterSkillIsGeneric
+    masterSkillFrontmatter
+    masterRoleCoordinates
     ;
 }
