@@ -557,6 +557,10 @@ let
       ".*changes/change-<name>.*"
     ] (builtins.readFile source)
   ) agentsSources;
+  agentsNameMaster = builtins.all (
+    source:
+    builtins.match ".*artifact-master.*Plan-Pn then Build-Pn.*" (builtins.readFile source) != null
+  ) agentsSources;
   dddPageHasVersionRow = builtins.all (
     source:
     builtins.match ".*\\| 5 Version \\| Solution expert \\|.*" (builtins.readFile source) != null
@@ -668,6 +672,7 @@ assert solutionExpertHasPhaseFive;
 assert requirementExpertHasNoLegacyProcedure;
 assert roleTemplateHasNoRootTasks;
 assert agentsNameVersions;
+assert agentsNameMaster;
 assert dddPageHasVersionRow;
 assert dddReviewNamesPhaseFive;
 assert descriptions;
@@ -720,6 +725,7 @@ assert masterRoleCoordinates;
     requirementExpertHasNoLegacyProcedure
     roleTemplateHasNoRootTasks
     agentsNameVersions
+    agentsNameMaster
     dddPageHasVersionRow
     dddReviewNamesPhaseFive
     descriptions

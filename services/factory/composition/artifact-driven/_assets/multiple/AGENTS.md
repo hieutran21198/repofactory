@@ -12,3 +12,6 @@ Keep the artifacts of each feature in `docs/artifact/feat-<name>/`. Each unit of
 in `changes/change-<name>/`. Each version in `versions/<version>/` holds the full state of the
 feature. Read the current version for the state of a feature. Do the five phases in order. Commit
 at the end of each phase.
+
+Coordinate each change with the `artifact-master` role (opencode) or skill (claude, codex).
+Do one phase at a time with Plan-Pn then Build-Pn. Do not plan all five phases in one pass.
