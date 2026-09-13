@@ -672,7 +672,7 @@ let
     in
     builtins.all (pattern: matches pattern text) [
       "Azure/static-web-apps-deploy@v1"
-      "app_location: apps/documentation"
+      "app_location: apps/documentation/build"
       "output_location: build"
       "skip_app_build: true"
       "secrets[.]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN"
@@ -721,7 +721,7 @@ let
     in
     builtins.all (pattern: matches pattern text) [
       "AzureStaticWebApp@0"
-      "app_location: apps/documentation"
+      "app_location: apps/documentation/build"
       "output_location: build"
       "skip_app_build: true"
       "azure_static_web_apps_api_token: [$][(]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN[)]"

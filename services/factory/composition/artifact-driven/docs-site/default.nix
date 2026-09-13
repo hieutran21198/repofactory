@@ -115,7 +115,7 @@ let
           "\n      - name: Check out the notification code\n        uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n      - name: Notify the team about the deployment\n        run: python3 .github/docs-site/notify.py\n        env:\n          DOCS_SITE_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'${lib.optionalString (builtins.elem "google-chat" notification.uses) "\n          DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: \${{ secrets.${notification.google-chat.webhook-secret} }}"}${lib.optionalString (builtins.elem "slack" notification.uses) "\n          DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK: \${{ secrets.${notification.slack.webhook-secret} }}"}${lib.optionalString (builtins.elem "telegram" notification.uses) "\n          DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN: \${{ secrets.${notification.telegram.token-secret} }}\n          DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}"}${deploymentUrlLine}\n          DOCS_SITE_REPOSITORY: \${{ github.repository }}\n          DOCS_SITE_REF_NAME: \${{ github.ref_name }}\n          DOCS_SITE_COMMIT_SHA: \${{ github.sha }}\n          DOCS_SITE_RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}\n"
         else
           "\n";
-      azureDeployStep = "\n      - name: Deploy to Azure Static Web Apps\n        uses: Azure/static-web-apps-deploy@v1\n        with:\n          azure_static_web_apps_api_token: \${{ secrets.${docsSite.azure-static-web-app.api-token-secret} }}\n          app_location: apps/documentation\n          output_location: build\n          skip_app_build: true";
+      azureDeployStep = "\n      - name: Deploy to Azure Static Web Apps\n        uses: Azure/static-web-apps-deploy@v1\n        with:\n          azure_static_web_apps_api_token: \${{ secrets.${docsSite.azure-static-web-app.api-token-secret} }}\n                app_location: apps/documentation/build\n                output_location: build\n                skip_app_build: true";
       buildStepsTail =
         if isAzure then
           "${azureDeployStep}${notificationSteps}"
@@ -198,7 +198,7 @@ let
             - task: AzureStaticWebApp@0
               displayName: Deploy to Azure Static Web Apps
               inputs:
-                app_location: apps/documentation
+                app_location: apps/documentation/build
                 output_location: build
                 skip_app_build: true
                 azure_static_web_apps_api_token: $(${docsSite.azure-static-web-app.api-token-secret})
