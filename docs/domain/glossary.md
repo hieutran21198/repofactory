@@ -9,6 +9,7 @@ write two rows.
 | Acceptance notification | context-factory | One team message that summarizes accepted artifact changes from a merged pull request. | Artifact issue |
 | Artifact issue | context-factory | A project issue that represents one accepted feature artifact file. | Pull request |
 | Artifact proposal | context-factory | An artifact change in a pull request that has not merged. | Accepted artifact |
+| Azure Pipelines | context-factory | An Azure DevOps CI provider that runs factory workflows. | GitHub Actions |
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |
 | Provider | context-factory | An external system that receives artifact issues. | CI provider |
 | Harness | context-factory | A coding agent product that reads the rendered role files and the skills of a project. Examples: claude, codex, opencode. | Coding agent |

@@ -16,6 +16,7 @@ working rules the factory supplies to a generated repository.
 | Accepted artifact | A feature artifact on the default branch after a pull request merges. |
 | Acceptance notification | One team message that summarizes accepted artifact changes from a merged pull request. |
 | Artifact issue | A project issue that represents one accepted feature artifact file. |
+| Azure Pipelines | An Azure DevOps CI provider that runs factory workflows. |
 | Repository blueprint | The selected options and generated files for one repository. |
 | Provider | An external system that receives artifact issues. |
 | Harness | A coding agent product that reads the rendered role files and the skills of a project. |
@@ -35,6 +36,7 @@ working rules the factory supplies to a generated repository.
 
 - The repository is the source of truth for artifacts.
 - A rejected artifact proposal does not make a project issue.
+- An accepted artifact sync runs on the selected CI provider (github-actions or azure-pipelines) with the same result.
 - One accepted feature artifact file has one issue in one selected provider.
 - A child artifact issue points to its parent artifact issue.
 - Provider identifiers do not occur in artifact files.
