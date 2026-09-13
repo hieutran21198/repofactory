@@ -24,7 +24,7 @@ adapter but does not activate a composition.
 - The artifact issue composition gives each artifact type one first status.
 - An enabled acceptance notification selects one or more supported notification providers and their settings.
 - An enabled documentation site composition needs the artifact-driven model, the multiple
-  repositories architecture, and GitHub Actions.
+  repositories architecture, and one selected CI provider (github-actions or azure-pipelines).
 - An enabled documentation site composition has a title, a site URL, and a base URL.
 - A documentation site extension adds typed static directories, watch paths, and build steps without replacing a factory-owned file.
 - An enabled deployment notification selects one or more supported notification providers and their settings.
