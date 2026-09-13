@@ -23,7 +23,9 @@ working rules the factory supplies to a generated repository.
 | Implementation expert | A role that owns phase 4 of the artifact-driven documentation model for one component. |
 | Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
 | Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
-| Documentation site | A website that renders the `docs/` tree of a generated repository and that GitHub Pages serves. |
+| Documentation site | A website that renders the `docs/` tree of a generated repository and that the selected publication target serves. |
+| Publication target | The hosting service that serves the documentation site, `github-pages` or `azure-static-web-app`. One site uses one target. |
+| Azure Static Web App | An Azure hosting service that serves static websites. It is one publication target of the documentation site. |
 | Generated documentation asset | A file that a workflow makes and adds to a documentation site static directory. |
 | Deployment notification | One team message that reports a successful documentation site deployment. |
 | Notification provider | An external system that receives a team notification. |
@@ -42,6 +44,8 @@ working rules the factory supplies to a generated repository.
 - Provider identifiers do not occur in artifact files.
 - An acceptance notification follows successful artifact issue synchronization.
 - A deployment notification follows a successful documentation site deployment.
+- A documentation site publishes to exactly one publication target.
+- The publication target is `github-pages` unless the maintainer selects `azure-static-web-app`.
 - A documentation site extension adds generated assets without replacing a factory-owned file.
 - A notification can use one or more supported notification providers.
 - Each unit of work on a feature is a change. The first change of a feature is `change-initial`.
