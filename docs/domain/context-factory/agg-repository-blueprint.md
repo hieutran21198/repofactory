@@ -18,7 +18,7 @@ adapter but does not activate a composition.
 ## Enforced invariants
 
 - One repository blueprint selects at most one project-management provider.
-- An enabled artifact issue composition needs the artifact-driven model and GitHub Actions.
+- An enabled artifact issue composition needs the artifact-driven model and one selected CI provider (github-actions or azure-pipelines).
 - An enabled artifact issue composition needs one supported project-management adapter.
 - Each selected adapter owns its target and credential settings.
 - The artifact issue composition gives each artifact type one first status.

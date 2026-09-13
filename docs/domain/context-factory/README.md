@@ -53,7 +53,7 @@ working rules the factory supplies to a generated repository.
 | Message | Kind | From |
 | --- | --- | --- |
 | Compose repository blueprint | command | Repository maintainer |
-| Synchronize accepted artifacts | command | GitHub Actions |
+| Synchronize accepted artifacts | command | GitHub Actions, Azure Pipelines |
 
 ## Outbound messages
 
