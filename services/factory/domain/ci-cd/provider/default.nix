@@ -12,6 +12,7 @@ in
       values = [
         "unset"
         "github-actions"
+        "azure-pipelines"
       ];
       default = "unset";
     };

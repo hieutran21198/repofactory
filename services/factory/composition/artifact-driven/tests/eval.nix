@@ -183,6 +183,46 @@ let
     githubOwner = "";
     githubProjectNumber = 0;
   };
+  azureGithubOn = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "github-projects";
+    enable = true;
+  };
+  azureTrelloOn = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "trello";
+    enable = true;
+  };
+  azureTrelloSplit = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "trello";
+    enable = true;
+    trelloImplementationBoard = "implementation-board";
+  };
+  azureMultiProviderOn = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "github-projects";
+    enable = true;
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
+  };
+  azureTrelloNotifyOn = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "trello";
+    enable = true;
+    notificationUses = [ "slack" ];
+    notificationSlackSecret = "TEAM_SLACK_WEBHOOK";
+  };
+  azureDisabled = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "github-projects";
+    githubOwner = "";
+    githubProjectNumber = 0;
+  };
 
   invalidSetups = [
     (evalModule {
@@ -257,6 +297,29 @@ let
       enable = true;
       notificationUses = [ "slack" ];
       notificationSlackSecret = "invalid-secret";
+    })
+    (evalModule {
+      ciProvider = "jenkins";
+      projectProvider = "github-projects";
+      enable = true;
+    })
+    (evalModule {
+      ciProvider = "azure-pipelines";
+      projectProvider = "github-projects";
+      enable = true;
+      githubSecret = "invalid-secret";
+    })
+    (evalModule {
+      ciProvider = "azure-pipelines";
+      projectProvider = "trello";
+      enable = true;
+      trelloTokenSecret = "invalid-secret";
+    })
+    (evalModule {
+      ciProvider = "azure-pipelines";
+      projectProvider = "github-projects";
+      enable = true;
+      notificationUses = [ "telegram" ];
     })
   ];
 
@@ -461,6 +524,78 @@ let
         builtins.readFile credentialGuide.source
       ) != null;
 
+  githubWorkflowFile = ".github/workflows/accepted-artifact-issues.yml";
+  azurePipelineFile = "azure-pipelines/accepted-artifact-issues.yml";
+  azureEmitsOnlyPipeline =
+    cfg:
+    builtins.hasAttr azurePipelineFile cfg.files && !(builtins.hasAttr githubWorkflowFile cfg.files);
+  azureGithubOnOk = azureEmitsOnlyPipeline azureGithubOn && assertionsPass azureGithubOn;
+  azureTrelloOnOk = azureEmitsOnlyPipeline azureTrelloOn && assertionsPass azureTrelloOn;
+  azureTrelloSplitOk = azureEmitsOnlyPipeline azureTrelloSplit && assertionsPass azureTrelloSplit;
+  azureDisabledOk =
+    !(builtins.hasAttr azurePipelineFile azureDisabled.files)
+    && !(builtins.hasAttr githubWorkflowFile azureDisabled.files)
+    && !hasProjectIssueFiles azureDisabled
+    && assertionsPass azureDisabled;
+  azureSharedIdentical =
+    azureGithubOn.files.".github/artifact-issues/sync.py".source
+    == githubOn.files.".github/artifact-issues/sync.py".source
+    &&
+      azureGithubOn.files.".github/artifact-issues/config.json".text
+      == githubOn.files.".github/artifact-issues/config.json".text
+    &&
+      azureTrelloOn.files.".github/artifact-issues/config.json".text
+      == trelloOn.files.".github/artifact-issues/config.json".text
+    &&
+      azureTrelloSplit.files.".github/artifact-issues/config.json".text
+      == trelloSplit.files.".github/artifact-issues/config.json".text
+    &&
+      azureMultiProviderOn.files.${notificationFile}.source
+      == multiProviderOn.files.${notificationFile}.source;
+  azureGithubSecretsMapped =
+    builtins.match ".*PROJECT_TOKEN:.*\\$\\(PROJECTS_TOKEN\\).*"
+      azureGithubOn.files.${azurePipelineFile}.text != null
+    &&
+      builtins.match ".*GITHUB_TOKEN:.*\\$\\(GITHUB_TOKEN\\).*"
+        azureGithubOn.files.${azurePipelineFile}.text != null;
+  azureTrelloSecretsMapped =
+    builtins.match ".*TRELLO_API_KEY:.*\\$\\(TRELLO_API_KEY\\).*"
+      azureTrelloOn.files.${azurePipelineFile}.text != null
+    &&
+      builtins.match ".*TRELLO_TOKEN:.*\\$\\(TRELLO_TOKEN\\).*"
+        azureTrelloOn.files.${azurePipelineFile}.text != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_SLACK_WEBHOOK:.*\\$\\(TEAM_SLACK_WEBHOOK\\).*"
+        azureTrelloNotifyOn.files.${azurePipelineFile}.text != null;
+  azurePipelineTrigger =
+    let
+      pipeline = azureGithubOn.files.${azurePipelineFile}.text;
+    in
+    builtins.match ".*trigger:.*" pipeline != null
+    && builtins.match ".*pr: none.*" pipeline != null
+    && builtins.match ".*checkout: self.*" pipeline != null
+    && builtins.match ".*persistCredentials: false.*" pipeline != null;
+  azureMultiProviderMatches =
+    let
+      pipeline = azureMultiProviderOn.files.${azurePipelineFile}.text;
+    in
+    builtins.match ".*ARTIFACT_NOTIFICATION_USES:.*google-chat.*slack.*telegram.*" pipeline != null
+    &&
+      builtins.match ".*ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK.*ARTIFACT_NOTIFICATION_SLACK_WEBHOOK.*ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN.*ARTIFACT_NOTIFICATION_TELEGRAM_CHAT_ID: \"-100123\".*" pipeline
+      != null
+    && builtins.match ".*condition: and.*succeeded.*ArtifactIssuesNotify.*true.*" pipeline != null;
+  azureGuidesMatch =
+    builtins.match ".*azure-pipelines/accepted-artifact-issues.yml.*" (
+      builtins.readFile githubOn.files."docs/wiki/documentation/artifact-driven/project-issues.md".source
+    ) != null
+    &&
+      builtins.match ".*Mark each mapped variable as secret.*" (builtins.readFile credentialGuide.source)
+      != null
+    &&
+      builtins.match ".*one to one onto an Azure secret variable.*" (
+        builtins.readFile credentialGuide.source
+      ) != null;
+
   skillPath = ../_assets/agent/skill/by-role/solution-expert/expert-role;
   skillFiles = [
     "SKILL.md"
@@ -654,6 +789,16 @@ assert multiProviderWorkflowMatches;
 assert notificationWorkflowIndentation;
 assert credentialGuideMatches;
 assert notificationGuidesMatch;
+assert azureGithubOnOk;
+assert azureTrelloOnOk;
+assert azureTrelloSplitOk;
+assert azureDisabledOk;
+assert azureSharedIdentical;
+assert azureGithubSecretsMapped;
+assert azureTrelloSecretsMapped;
+assert azurePipelineTrigger;
+assert azureMultiProviderMatches;
+assert azureGuidesMatch;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
 assert skillShipped;
@@ -707,6 +852,16 @@ assert masterRoleCoordinates;
     notificationWorkflowIndentation
     credentialGuideMatches
     notificationGuidesMatch
+    azureGithubOnOk
+    azureTrelloOnOk
+    azureTrelloSplitOk
+    azureDisabledOk
+    azureSharedIdentical
+    azureGithubSecretsMapped
+    azureTrelloSecretsMapped
+    azurePipelineTrigger
+    azureMultiProviderMatches
+    azureGuidesMatch
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
     skillShipped

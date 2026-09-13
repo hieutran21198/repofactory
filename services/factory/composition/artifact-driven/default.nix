@@ -61,6 +61,93 @@ let
                 ${providerSecrets}${resultEnvironment}
       ${notificationStep}
     '';
+  azurePipeline =
+    provider: tokenSecret:
+    let
+      notification = config.${namespace}.composition.artifact-driven.project-issues.notification;
+      notificationEnabled = notification.uses != [ ];
+      providerSecrets =
+        if provider == "github-projects" then
+          "PROJECT_TOKEN: $(${tokenSecret})"
+        else
+          let
+            trello = config.${namespace}.domain.project-management.provider.trello;
+          in
+          "TRELLO_API_KEY: $(${trello.api-key-secret})\n    TRELLO_TOKEN: $(${trello.token-secret})";
+      notificationSecrets =
+        lib.optionalString (builtins.elem "google-chat" notification.uses) "\n    ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: $(${notification.google-chat.webhook-secret})"
+        + lib.optionalString (builtins.elem "slack" notification.uses) "\n    ARTIFACT_NOTIFICATION_SLACK_WEBHOOK: $(${notification.slack.webhook-secret})"
+        + lib.optionalString (builtins.elem "telegram" notification.uses) "\n    ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN: $(${notification.telegram.token-secret})\n    ARTIFACT_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}";
+      notificationStep = lib.optionalString notificationEnabled ''
+        - script: python3 .github/artifact-issues/notify.py
+          displayName: Notify the team about accepted artifacts
+          condition: and(succeeded(), eq(variables['ArtifactIssuesNotify'], 'true'))
+          env:
+            ARTIFACT_ISSUES_RESULT: $(Agent.TempDirectory)/accepted-artifacts.json
+            ARTIFACT_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'${notificationSecrets}
+      '';
+    in
+    ''
+      trigger:
+        branches:
+          include:
+          - main
+      pr: none
+
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      steps:
+      - checkout: self
+        persistCredentials: false
+      - script: |
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+          reason = os.environ.get("BUILD_REASON", "Manual")
+          repository = os.environ.get("BUILD_REPOSITORY_NAME", "")
+          sha = os.environ.get("BUILD_SOURCEVERSION", "")
+          branch = os.environ.get("BUILD_SOURCEBRANCHNAME", "main")
+          event_path = os.environ.get("ARTIFACT_ISSUES_EVENT", "")
+          token = os.environ.get("GITHUB_TOKEN", "")
+          event = {"repository": {"default_branch": branch or "main"}}
+          notify = "false"
+          if reason != "Manual" and repository and sha and token:
+              api = "https://api.github.com/repos/" + repository + "/commits/" + sha + "/pulls"
+              request = urllib.request.Request(api, headers={"Accept": "application/vnd.github+json", "Authorization": "Bearer " + token, "X-GitHub-Api-Version": "2022-11-28"})
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      pulls = json.loads(response.read().decode())
+                  merged = [pull for pull in pulls if isinstance(pull, dict) and pull.get("merged")]
+                  if merged:
+                      pull = merged[0]
+                      event["pull_request"] = {"number": pull.get("number", 0), "title": pull.get("title", ""), "html_url": pull.get("html_url", ""), "merged": True, "merge_commit_sha": sha}
+                      notify = "true"
+                  else:
+                      print("No merged pull request found for this commit; scan the complete artifact tree")
+              except Exception as error:
+                  raise SystemExit("accepted-artifact-issues: cannot resolve the merged pull request: " + str(error))
+          with open(event_path, "w") as handle:
+              json.dump(event, handle)
+          print("##vso[task.setvariable variable=ArtifactIssuesNotify]" + notify)
+          PYEOF
+        displayName: Write the accepted artifact event file
+        env:
+          ARTIFACT_ISSUES_EVENT: $(Agent.TempDirectory)/accepted-artifact-event.json
+          BUILD_REASON: $(Build.Reason)
+          BUILD_REPOSITORY_NAME: $(Build.Repository.Name)
+          BUILD_SOURCEBRANCHNAME: $(Build.SourceBranchName)
+          BUILD_SOURCEVERSION: $(Build.SourceVersion)
+          GITHUB_TOKEN: $(GITHUB_TOKEN)
+      - script: python3 .github/artifact-issues/sync.py
+        displayName: Synchronize accepted artifacts
+        env:
+          GITHUB_REPOSITORY: $(Build.Repository.Name)
+          GITHUB_SHA: $(Build.SourceVersion)
+          GITHUB_EVENT_PATH: $(Agent.TempDirectory)/accepted-artifact-event.json
+          GITHUB_TOKEN: $(GITHUB_TOKEN)
+          ${providerSecrets}
+          ARTIFACT_ISSUES_RESULT: $(Agent.TempDirectory)/accepted-artifacts.json
+      ${notificationStep}'';
 in
 {
   options.${namespace}.composition.artifact-driven.project-issues = {
@@ -148,8 +235,11 @@ in
             message = "${namespace}.composition.artifact-driven.project-issues requires ${namespace}.domain.documentation.use = \"artifact-driven\"";
           }
           {
-            assertion = ci-cd.provider.use == "github-actions";
-            message = "${namespace}.composition.artifact-driven.project-issues requires ${namespace}.domain.ci-cd.provider.use = \"github-actions\"";
+            assertion = builtins.elem ci-cd.provider.use [
+              "github-actions"
+              "azure-pipelines"
+            ];
+            message = "${namespace}.composition.artifact-driven.project-issues requires ${namespace}.domain.ci-cd.provider.use = \"github-actions\" or \"azure-pipelines\"";
           }
           {
             assertion = builtins.elem projectProvider [
@@ -344,15 +434,9 @@ in
         };
       })
 
-      # Combine accepted artifact issues with GitHub Actions and the selected project provider.
+      # Combine accepted artifact issues with the selected CI provider and project provider.
       (lib.mkIf artifactIssues {
         files = {
-          ".github/workflows/accepted-artifact-issues.yml" = {
-            text = workflow projectProvider (
-              if projectProvider == "github-projects" then githubProjects.token-secret else ""
-            );
-            copyMode = "copy";
-          };
           ".github/artifact-issues/sync.py" = {
             source = ./_assets/project-issues/sync.py;
             copyMode = "copy";
@@ -367,6 +451,22 @@ in
           };
           "docs/wiki/documentation/artifact-driven/project-issue-credentials.md" = {
             source = ./_assets/project-issues/project-issue-credentials.md;
+            copyMode = "copy";
+          };
+        }
+        // lib.optionalAttrs (ci-cd.provider.use == "github-actions") {
+          ".github/workflows/accepted-artifact-issues.yml" = {
+            text = workflow projectProvider (
+              if projectProvider == "github-projects" then githubProjects.token-secret else ""
+            );
+            copyMode = "copy";
+          };
+        }
+        // lib.optionalAttrs (ci-cd.provider.use == "azure-pipelines") {
+          "azure-pipelines/accepted-artifact-issues.yml" = {
+            text = azurePipeline projectProvider (
+              if projectProvider == "github-projects" then githubProjects.token-secret else ""
+            );
             copyMode = "copy";
           };
         }
