@@ -68,6 +68,30 @@ let
       step.working-directory != null
     ) "\n        working-directory: ${yamlScalar step.working-directory}";
   renderWorkflowSteps = steps: lib.concatMapStrings renderWorkflowStep steps;
+  renderAzureEnv =
+    values:
+    lib.optionalString (values != { }) (
+      "\n  env:\n"
+      + lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (key: value: "    ${yamlKey key}: ${yamlScalar value}") values
+      )
+    );
+  renderAzureRunStep =
+    step:
+    "\n- script: ${yamlScalar step.run}"
+    + lib.optionalString (step.name != null) "\n  displayName: ${yamlScalar step.name}"
+    + "\n  workingDirectory: ${
+      yamlScalar (if step.working-directory != null then step.working-directory else "apps/documentation")
+    }"
+    + renderAzureEnv (step.env or { });
+  renderAzureUsesStep =
+    step:
+    "\n- script: ${yamlScalar "Run action ${step.uses}"}"
+    + lib.optionalString (step.name != null) "\n  displayName: ${yamlScalar step.name}"
+    + renderAzureEnv ((step."with" or { }) // (step.env or { }));
+  renderAzureStep =
+    step: if step.run != null then renderAzureRunStep step else renderAzureUsesStep step;
+  renderAzureSteps = steps: lib.concatMapStrings renderAzureStep steps;
   workflow =
     docsSite:
     let
@@ -142,12 +166,77 @@ let
             - name: Deploy to GitHub Pages
               id: deployment
               uses: actions/deploy-pages@v4${notificationSteps}'';
+  azurePipeline =
+    docsSite:
+    let
+      inherit (docsSite) notification;
+      notificationEnabled = notification.uses != [ ];
+      watchPaths = lib.concatMapStrings (
+        path: "\n    - ${yamlScalar path}"
+      ) docsSite.workflow.watch-paths;
+      beforeNodeSetup = renderAzureSteps docsSite.workflow.build.before-node-setup;
+      beforeSiteBuild = renderAzureSteps docsSite.workflow.build.before-site-build;
+      afterSiteBuild = renderAzureSteps docsSite.workflow.build.after-site-build;
+      notificationEnv =
+        "\n    DOCS_SITE_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'"
+        + lib.optionalString (builtins.elem "google-chat" notification.uses) "\n    DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: $(${notification.google-chat.webhook-secret})"
+        + lib.optionalString (builtins.elem "slack" notification.uses) "\n    DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK: $(${notification.slack.webhook-secret})"
+        + lib.optionalString (builtins.elem "telegram" notification.uses) "\n    DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN: $(${notification.telegram.token-secret})\n    DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}"
+        + "\n    DOCS_SITE_DEPLOYMENT_URL: '${docsSite.url}${docsSite.base-url}'"
+        + "\n    DOCS_SITE_REPOSITORY: $(Build.Repository.Name)"
+        + "\n    DOCS_SITE_REF_NAME: $(Build.SourceBranchName)"
+        + "\n    DOCS_SITE_COMMIT_SHA: $(Build.SourceVersion)"
+        + "\n    DOCS_SITE_RUN_URL: $(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)";
+      notificationStep =
+        if notificationEnabled then
+          "- script: python3 .github/docs-site/notify.py\n  displayName: Notify the team about the deployment\n  env:${notificationEnv}\n"
+        else
+          "";
+    in
+    ''
+      trigger:
+        branches:
+          include:
+          - main
+        paths:
+          include:
+          - docs/**
+          - apps/documentation/**
+          - azure-pipelines/docs-site.yml${watchPaths}
+      pr: none
+
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      steps:
+      - checkout: self
+        persistCredentials: false${beforeNodeSetup}
+      - task: NodeTool@0
+        displayName: Set up Node.js
+        inputs:
+          versionSpec: '22.x'
+      - script: npm ci
+        displayName: Install the dependencies
+        workingDirectory: apps/documentation${beforeSiteBuild}
+      - script: npm run build
+        displayName: Build the website
+        workingDirectory: apps/documentation${afterSiteBuild}
+      - script: |
+          export GH_TOKEN="$DOCS_SITE_GITHUB_TOKEN"
+          export GITHUB_TOKEN="$DOCS_SITE_GITHUB_TOKEN"
+          npx --yes gh-pages --dist build --message "Deploy docs site $(Build.SourceVersion)"
+        displayName: Publish to GitHub Pages
+        workingDirectory: apps/documentation
+        env:
+          DOCS_SITE_GITHUB_TOKEN: $(DOCS_SITE_GITHUB_TOKEN)
+    ''
+    + notificationStep;
 in
 {
   options.${namespace}.composition.artifact-driven.docs-site = {
     enable = _utils.mkBoolOpt {
       default = false;
-      description = "Whether the factory renders the documentation site at apps/documentation and its GitHub Pages workflow";
+      description = "Whether the factory renders the documentation site at apps/documentation and its CI pipeline";
     };
     title = _utils.mkStrOpt {
       default = "Documentation";
@@ -252,8 +341,11 @@ in
           message = "${namespace}.composition.artifact-driven.docs-site requires ${namespace}.domain.repo-arch.use = \"multiple\"";
         }
         {
-          assertion = ci-cd.provider.use == "github-actions";
-          message = "${namespace}.composition.artifact-driven.docs-site requires ${namespace}.domain.ci-cd.provider.use = \"github-actions\"";
+          assertion = builtins.elem ci-cd.provider.use [
+            "github-actions"
+            "azure-pipelines"
+          ];
+          message = "${namespace}.composition.artifact-driven.docs-site requires ${namespace}.domain.ci-cd.provider.use = \"github-actions\" or \"azure-pipelines\"";
         }
         {
           assertion = builtins.match "https?://[^/]+" docsSite.url != null;
@@ -354,12 +446,20 @@ in
           source = ./_assets/apps/documentation/README.md;
           copyMode = "seed";
         };
+        "docs/wiki/documentation/artifact-driven/docs-site.md" = {
+          source = ./_assets/docs/wiki/documentation/artifact-driven/docs-site.md;
+          copyMode = "copy";
+        };
+      }
+      // lib.optionalAttrs (ci-cd.provider.use == "github-actions") {
         ".github/workflows/docs-site.yml" = {
           text = workflow docsSite;
           copyMode = "copy";
         };
-        "docs/wiki/documentation/artifact-driven/docs-site.md" = {
-          source = ./_assets/docs/wiki/documentation/artifact-driven/docs-site.md;
+      }
+      // lib.optionalAttrs (ci-cd.provider.use == "azure-pipelines") {
+        "azure-pipelines/docs-site.yml" = {
+          text = azurePipeline docsSite;
           copyMode = "copy";
         };
       }

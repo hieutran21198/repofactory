@@ -155,48 +155,95 @@ let
     ];
     notificationTelegramChatId = "-100123";
   };
+  extensionStaticDirectories = [
+    "static"
+    "generated-static"
+  ];
+  extensionWatchPaths = [ "services/manual/docs/**" ];
+  extensionBeforeNodeSetup = [
+    {
+      name = "Build the manual PDF";
+      uses = "xu-cheng/latex-action@v4";
+      "with" = {
+        root_file = "manual.tex";
+        working_directory = "services/manual/docs";
+        latexmk_use_xelatex = true;
+      };
+      env = {
+        TEXINPUTS = ".:./styles//:";
+        RETRY_COUNT = 3;
+        SCALE = 1.5;
+      };
+    }
+  ];
+  extensionBeforeSiteBuild = [
+    {
+      name = "Copy the manual PDF";
+      run = ''
+        mkdir -p static/manual
+        cp "$PDF_SOURCE" static/manual/manual.pdf
+      '';
+      env.PDF_SOURCE = "../../services/manual/docs/manual.pdf";
+      working-directory = "apps/documentation";
+    }
+  ];
+  extensionAfterSiteBuild = [
+    {
+      name = "Check the first output";
+      run = "test -f build/manual/manual.pdf";
+    }
+    {
+      name = "Check the second output";
+      run = "test -d build";
+    }
+  ];
   extensions = evalModule {
     enable = true;
-    staticDirectories = [
-      "static"
-      "generated-static"
+    staticDirectories = extensionStaticDirectories;
+    workflowWatchPaths = extensionWatchPaths;
+    beforeNodeSetup = extensionBeforeNodeSetup;
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+  };
+  azure = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+  };
+  azureMultiProvider = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
     ];
-    workflowWatchPaths = [ "services/manual/docs/**" ];
+    notificationTelegramChatId = "-100123";
+  };
+  azureExtensions = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    staticDirectories = extensionStaticDirectories;
+    workflowWatchPaths = extensionWatchPaths;
+    beforeNodeSetup = extensionBeforeNodeSetup;
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+  };
+  badCiProvider = evalModule {
+    enable = true;
+    ciProvider = "gitlab";
+  };
+  azureEmptyPath = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    staticDirectories = [ "" ];
+  };
+  azureStepWithUsesAndRun = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
     beforeNodeSetup = [
       {
-        name = "Build the manual PDF";
-        uses = "xu-cheng/latex-action@v4";
-        "with" = {
-          root_file = "manual.tex";
-          working_directory = "services/manual/docs";
-          latexmk_use_xelatex = true;
-        };
-        env = {
-          TEXINPUTS = ".:./styles//:";
-          RETRY_COUNT = 3;
-          SCALE = 1.5;
-        };
-      }
-    ];
-    beforeSiteBuild = [
-      {
-        name = "Copy the manual PDF";
-        run = ''
-          mkdir -p static/manual
-          cp "$PDF_SOURCE" static/manual/manual.pdf
-        '';
-        env.PDF_SOURCE = "../../services/manual/docs/manual.pdf";
-        working-directory = "apps/documentation";
-      }
-    ];
-    afterSiteBuild = [
-      {
-        name = "Check the first output";
-        run = "test -f build/manual/manual.pdf";
-      }
-      {
-        name = "Check the second output";
-        run = "test -d build";
+        uses = "actions/example@v1";
+        run = "echo invalid";
       }
     ];
   };
@@ -438,6 +485,92 @@ let
       text = extensions.files.".github/workflows/docs-site.yml".text;
     in
     !matches "uses: null" text && !matches "run: null" text && !matches "working-directory: null" text;
+  githubWorkflowFile = ".github/workflows/docs-site.yml";
+  azurePipelineFile = "azure-pipelines/docs-site.yml";
+  perProviderEmission =
+    builtins.hasAttr githubWorkflowFile on.files
+    && !(builtins.hasAttr azurePipelineFile on.files)
+    && builtins.hasAttr githubWorkflowFile extensions.files
+    && !(builtins.hasAttr azurePipelineFile extensions.files)
+    && builtins.hasAttr azurePipelineFile azure.files
+    && !(builtins.hasAttr githubWorkflowFile azure.files)
+    && builtins.hasAttr azurePipelineFile azureExtensions.files
+    && !(builtins.hasAttr githubWorkflowFile azureExtensions.files)
+    && azure.files.${azurePipelineFile} ? text
+    && !(azure.files.${azurePipelineFile} ? source);
+  azureTriggerOrder =
+    let
+      text = azureExtensions.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "trigger:.*branches:.*include:.*- main"
+      "docs/[*][*].*apps/documentation/[*][*].*azure-pipelines/docs-site[.]yml.*services/manual/docs/[*][*]"
+      "pr: none"
+    ];
+  azureStepOrder =
+    let
+      text = azureExtensions.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "checkout: self.*Build the manual PDF.*NodeTool@0"
+      "NodeTool@0.*versionSpec.*22.*npm ci.*Copy the manual PDF"
+      "Copy the manual PDF.*npm run build.*Check the first output.*Check the second output.*Publish to GitHub Pages"
+    ];
+  azureExtensionValues =
+    let
+      text = azureExtensions.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "xu-cheng/latex-action@v4"
+      "root_file.*manual[.]tex"
+      "working_directory.*services/manual/docs"
+      "latexmk_use_xelatex: true"
+      "RETRY_COUNT: 3"
+      "SCALE: 1[.]5"
+      "TEXINPUTS"
+      "mkdir -p static/manual"
+      "PDF_SOURCE"
+      "workingDirectory.*apps/documentation"
+    ];
+  azureSharedBytes =
+    azure.files."${site}/site.json".text == on.files."${site}/site.json".text
+    && azureExtensions.files."${site}/site.json".text == extensions.files."${site}/site.json".text
+    &&
+      azureMultiProvider.files.${notificationFile}.source
+      == multiProvider.files.${notificationFile}.source
+    && azureMultiProvider.files.${notificationFile}.copyMode == "copy";
+  azureEmptyExtensions =
+    let
+      text = azure.files.${azurePipelineFile}.text;
+    in
+    !matches "Build the manual PDF" text
+    && !matches "services/manual/docs" text
+    && matches "npm ci" text
+    && matches "DOCS_SITE_GITHUB_TOKEN: [$][(]DOCS_SITE_GITHUB_TOKEN[)]" text;
+  azureNotificationsMatch =
+    let
+      text = azureMultiProvider.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "[.]github/docs-site/notify[.]py"
+      "DOCS_SITE_NOTIFICATION_USES:.*google-chat.*slack.*telegram"
+      "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: [$][(]DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK[)]"
+      "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK: [$][(]DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK[)]"
+      "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN: [$][(]DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN[)]"
+      "DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: \"-100123\""
+      "DOCS_SITE_DEPLOYMENT_URL"
+      "DOCS_SITE_REPOSITORY: [$][(]Build[.]Repository[.]Name[)]"
+      "DOCS_SITE_REF_NAME: [$][(]Build[.]SourceBranchName[)]"
+      "DOCS_SITE_COMMIT_SHA: [$][(]Build[.]SourceVersion[)]"
+      "DOCS_SITE_RUN_URL"
+    ];
+  azureAssertionsPass =
+    assertionsPass azure && assertionsPass azureMultiProvider && assertionsPass azureExtensions;
+  azureInvalidRejected = builtins.all (cfg: !assertionsPass cfg) [
+    badCiProvider
+    azureEmptyPath
+    azureStepWithUsesAndRun
+  ];
   notificationFile = ".github/docs-site/notify.py";
   notificationOptionsMatch =
     let
@@ -501,6 +634,9 @@ let
       "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK"
       "Google Chat incoming webhooks"
       "Slack incoming webhooks"
+      "Azure Pipelines"
+      "azure-pipelines/docs-site[.]yml"
+      "DOCS_SITE_GITHUB_TOKEN"
     ];
   onAssertionsPass = assertionsPass on;
   notificationAssertionsPass = assertionsPass googleChat && assertionsPass slack;
@@ -529,6 +665,15 @@ assert extensionOptionsMatch;
 assert extensionWorkflowMatches;
 assert extensionWatchPathIndentation;
 assert optionalCommandFieldsOmitted;
+assert perProviderEmission;
+assert azureTriggerOrder;
+assert azureStepOrder;
+assert azureExtensionValues;
+assert azureSharedBytes;
+assert azureEmptyExtensions;
+assert azureNotificationsMatch;
+assert azureAssertionsPass;
+assert azureInvalidRejected;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
@@ -556,6 +701,15 @@ assert invalidSetupsRejected;
     extensionWorkflowMatches
     extensionWatchPathIndentation
     optionalCommandFieldsOmitted
+    perProviderEmission
+    azureTriggerOrder
+    azureStepOrder
+    azureExtensionValues
+    azureSharedBytes
+    azureEmptyExtensions
+    azureNotificationsMatch
+    azureAssertionsPass
+    azureInvalidRejected
     notificationOptionsMatch
     notificationFilesMatch
     notificationWorkflowsMatch

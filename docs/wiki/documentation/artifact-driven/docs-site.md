@@ -22,12 +22,36 @@ The last command starts a local server and opens the website in the browser.
 
 ## Publish
 
-The workflow `.github/workflows/docs-site.yml` builds the website and publishes it to GitHub
+The factory renders one CI pipeline for the selected CI provider. The provider `github-actions`
+renders `.github/workflows/docs-site.yml`. The provider `azure-pipelines` renders
+`azure-pipelines/docs-site.yml`. Each pipeline builds the website and publishes it to GitHub
 Pages on each push to the default branch. One manual step remains. In the repository settings,
 under Pages, set the source to "GitHub Actions". Do this step one time.
 
 A push to another branch does not change the published website. A failed build does not change
-the published website. The Actions tab shows the failed run.
+the published website. The Actions tab shows the failed run for `github-actions`. The pipeline
+run shows the failed run for `azure-pipelines`.
+
+## Set up Azure Pipelines
+
+Select the CI provider in `devenv.local.nix`:
+
+```nix
+factory.domain.ci-cd.provider.use = "azure-pipelines";
+```
+
+Create the pipeline in Azure DevOps from `azure-pipelines/docs-site.yml`. The pipeline starts on
+each push to the default branch when the push changes `docs/**`, `apps/documentation/**`,
+`azure-pipelines/docs-site.yml`, or a configured `workflow.watch-paths` value. You can also
+start a manual run for setup and recovery.
+
+Store the GitHub token as a secret variable with the name `DOCS_SITE_GITHUB_TOKEN`. Mark the
+variable as secret. The publish step uses this variable to publish the build output to GitHub
+Pages. Store each notification secret as a secret variable with the same name. Mark each variable
+as secret. The Telegram chat ID stays a plain variable.
+
+One manual step remains. In the repository settings, under Pages, set the source to "GitHub
+Actions". Do this step one time. The factory cannot do this step.
 
 ## Publish generated assets
 
@@ -46,7 +70,8 @@ The build workflow has three step lists:
 | `workflow.build.after-site-build` | After `npm run build` and before the Pages artifact upload. |
 
 A step supports `name`, `uses`, `with`, `run`, `env`, and `working-directory`. Set one of `uses`
-or `run`. A run step uses `apps/documentation/` as its default working directory.
+or `run`. A run step uses `apps/documentation/` as its default working directory. Azure
+Pipelines runs the same steps in the same order with the same values.
 
 This example builds a LaTeX manual from one service. It copies the PDF into a static directory.
 Docusaurus then adds the PDF to the website build.
@@ -120,7 +145,8 @@ for Telegram. Use the provider procedure:
 - [Telegram Bot API](https://core.telegram.org/bots/api#sendmessage)
 
 Treat a webhook URL or a bot token as a password. Store each value in its configured GitHub
-Actions repository secret.
+Actions repository secret. When the CI provider is `azure-pipelines`, store each value as an
+Azure secret variable with the same name and mark it as secret.
 
 ```bash
 read -rsp "Google Chat webhook: " DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK
