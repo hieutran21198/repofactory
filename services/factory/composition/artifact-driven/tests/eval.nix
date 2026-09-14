@@ -22,6 +22,11 @@ let
     optionalString = condition: string: if condition then string else "";
     optional = condition: value: if condition then [ value ] else [ ];
     optionalAttrs = condition: attrs: if condition then attrs else { };
+    concatStringsSep = builtins.concatStringsSep;
+    concatMapStringsSep =
+      separator: f: values:
+      builtins.concatStringsSep separator (map f values);
+    mapAttrsToList = f: attrs: map (name: f name attrs.${name}) (builtins.attrNames attrs);
     unique =
       list:
       builtins.foldl' (
@@ -743,11 +748,119 @@ let
     pattern: builtins.match pattern masterSkillText == null
   ) forbidden;
   masterSkillFrontmatter = builtins.match "---\nname: artifact-master\n.*" masterSkillText != null;
+  masterRoleText = base "artifact-master";
   masterRoleCoordinates = matchesAll [
-    ".*coordinate-plan.*"
-    ".*Plan-Pn.*"
+    ".*coordinate-plan.*chat only.*"
+    ".*Do not put the coordinate-plan in `tasks/`.*"
+    ".*Plan-P1 reads the business need or the change reason.*"
+    ".*Plan-P2, Plan-P3, and Plan-P5 read only the committed output of the prior phase.*"
+    ".*A plan is read-only.*"
+    ".*explicit user approval.*"
+    ".*Route phase 1 to the requirement expert.*"
+    ".*Route phases 2, 3, and 5 to the solution expert.*"
+    ".*Route each phase 4 component task to its implementation expert.*"
+    ".*ask the solution expert to help.*select an owner.*"
+    ".*Do not write requirements, specifications, decisions, tasks, code, tests, or versions.*"
+    ".*Each build ends with one commit for that phase.*"
     ".*Phase 4 has no Plan-P4.*"
-  ] (base "artifact-master");
+  ] masterRoleText;
+  masterRolePlanMessage = matchesAll [
+    ".*\\*\\*Phase:\\*\\*.*"
+    ".*\\*\\*Purpose:\\*\\*.*"
+    ".*\\*\\*Input:\\*\\*.*"
+    ".*\\*\\*Scope:\\*\\*.*"
+    ".*\\*\\*Expected files:\\*\\*.*"
+    ".*\\*\\*Owner:\\*\\*.*"
+    ".*\\*\\*Acceptance checks:\\*\\*.*"
+    ".*\\*\\*User choices or actions:\\*\\*.*"
+    ".*\\*\\*Approval request:\\*\\*.*"
+    ".*Mark an unknown required field as an open item.*"
+  ] masterRoleText;
+  masterRoleMessages = matchesAll [
+    ".*Phase 3 approval is the Phase 4 gate.*"
+    ".*Do not request a second phase approval.*"
+    ".*Send a progress message only when there is new material information.*"
+    ".*Do not send a routine progress message when there is no new material information.*"
+    ".*\\*\\*Written files:\\*\\*.*"
+    ".*\\*\\*Checks:\\*\\*.*"
+    ".*\\*\\*Commit:\\*\\*.*"
+    ".*\\*\\*Key decisions:\\*\\*.*"
+    ".*\\*\\*Open items:\\*\\*.*"
+    ".*\\*\\*Next input:\\*\\*.*"
+    ".*\\*\\*Next user action:\\*\\*.*"
+    ".*The handoff is the last message of the phase build.*"
+    ".*Include only information.*"
+  ] masterRoleText;
+  roleRender =
+    uses:
+    let
+      agent = configs.multipleOn.factory.domain.agent;
+      rendered = import ../../../domain/agent/role/default.nix {
+        inherit lib;
+        config.factory = {
+          _utils = optionUtils;
+          domain.agent = agent // {
+            harness = (agent.harness or { }) // {
+              inherit uses;
+            };
+            role = (agent.role or { }) // {
+              builder = builtins.mapAttrs (
+                name: role:
+                let
+                  roleHarness = role.harness or { };
+                in
+                role
+                // {
+                  enable = true;
+                  inherit name;
+                  harness = roleHarness // {
+                    claude = roleHarness.claude or { };
+                    codex = roleHarness.codex or { };
+                    opencode = roleHarness.opencode or { };
+                  };
+                }
+              ) agent.role.builder;
+            };
+          };
+        };
+        namespace = "factory";
+      };
+    in
+    rendered.config.files;
+  opencodeRole = (roleRender [ "opencode" ]).".opencode/agents/artifact-master.md".text;
+  claudeRole = (roleRender [ "claude" ]).".claude/agents/artifact-master.md".text;
+  codexRole =
+    (roleRender [ "codex" ]).".codex/agents/artifact-master.toml".toml.developer_instructions;
+  renderedMasterRolesMatch =
+    builtins.all
+      (
+        text:
+        matchesAll [
+          ".*## Phase control.*"
+          ".*Plan-P1 reads the business need or the change reason.*"
+          ".*Phase 4 has no Plan-P4.*"
+          ".*## Plan-Pn message.*"
+          ".*## Phase 4 start message.*"
+          ".*Phase 3 approval is the Phase 4 gate.*"
+          ".*## Build-Pn handoff.*"
+        ] text
+      )
+      [
+        opencodeRole
+        claudeRole
+        codexRole
+      ];
+  unselectedMasterRoleOmitted = roleRender [ ] == { };
+  masterSkillPaths = matchesAll [
+    ".*\\.opencode/agents/artifact-master\\.md.*"
+    ".*\\.claude/agents/artifact-master\\.md.*"
+    ".*\\.codex/agents/artifact-master\\.toml.*"
+    ".*Load the rendered `artifact-master` role before you coordinate a change.*"
+  ] masterSkillText;
+  masterSkillDoesNotCopyRole =
+    builtins.match ".*## Plan-Pn message.*" masterSkillText == null
+    && builtins.match ".*## Build-Pn handoff.*" masterSkillText == null
+    && builtins.match ".*\\*\\*Written files:\\*\\*.*" masterSkillText == null;
 
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
@@ -829,6 +942,12 @@ assert masterSkillOmitted;
 assert masterSkillIsGeneric;
 assert masterSkillFrontmatter;
 assert masterRoleCoordinates;
+assert masterRolePlanMessage;
+assert masterRoleMessages;
+assert renderedMasterRolesMatch;
+assert unselectedMasterRoleOmitted;
+assert masterSkillPaths;
+assert masterSkillDoesNotCopyRole;
 {
   inherit
     sourcesMatch
@@ -892,5 +1011,11 @@ assert masterRoleCoordinates;
     masterSkillIsGeneric
     masterSkillFrontmatter
     masterRoleCoordinates
+    masterRolePlanMessage
+    masterRoleMessages
+    renderedMasterRolesMatch
+    unselectedMasterRoleOmitted
+    masterSkillPaths
+    masterSkillDoesNotCopyRole
     ;
 }
