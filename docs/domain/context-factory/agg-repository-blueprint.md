@@ -14,6 +14,9 @@ adapter but does not activate a composition.
 | From | Command | To |
 | --- | --- | --- |
 | Options selected | Compose repository blueprint | Blueprint composed |
+| Wire surface changed | Run contract gates | Gates passed |
+| Gates passed | Publish provider contract | Contract published |
+| Contract published | Compare provider contract | Comparison reported |
 
 ## Enforced invariants
 
@@ -35,6 +38,11 @@ adapter but does not activate a composition.
 - An artifact-driven repository has one canonical artifact-master role body.
 - Each selected harness receives a rendered artifact-master role with the canonical coordination and message contract.
 - The artifact-master skill identifies the rendered role of each supported harness and does not repeat the canonical role body.
+- Each provider component with a wire surface owns one machine-readable contract for its wire surface.
+- The contract describes each operation that a consumer team can use.
+- The contract uses the language that the selection rule gives for its wire surface.
+- A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
+- Each release publishes the contract that matches the release.
 
 ## Corrective policies
 
@@ -45,18 +53,26 @@ adapter but does not activate a composition.
 | Acceptance notification failed | Retry delivery and report the final failure. |
 | Documentation site deployed | Send one deployment notification when notification is enabled. |
 | Deployment notification failed | Retry delivery and report the last failure. |
+| Breaking change detected | Block consumer acceptance and inform each consumer team. |
+| Contract gate failed | Keep the prior published contract and report the failure to the provider team. |
 
 ## Handled commands
 
 | Command | Result | Emits |
 | --- | --- | --- |
 | Compose repository blueprint | Generate the selected files or return an option error. | Repository blueprint composed |
+| Run contract gates | Run lint, verification, and breaking-change comparison, or return a gate error. | Contract gate failed |
+| Publish provider contract | Publish the contract with the release, or return a publication error. | Provider contract published |
+| Compare provider contract | Compare two release contracts and report compatible or breaking. | Breaking change detected |
 
 ## Created events
 
 | Event | Payload |
 | --- | --- |
 | Repository blueprint composed | Selected domains, compositions, generated file paths, and rendered artifact-master role paths. |
+| Provider contract published | Provider identity, release tag, wire surface, contract language, and contract asset path. |
+| Breaking change detected | Provider identity, old and new release tags, and each added, altered, and removed operation. |
+| Contract gate failed | Gate name, operation identifiers, and the failure cause. |
 
 ## References by identity
 

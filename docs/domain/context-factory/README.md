@@ -69,6 +69,9 @@ provider component owns a machine-readable contract for its wire surface.
 | --- | --- | --- |
 | Compose repository blueprint | command | Repository maintainer |
 | Synchronize accepted artifacts | command | GitHub Actions, Azure Pipelines |
+| Publish provider contract | command | Provider team |
+| Run contract gates | command | Provider team |
+| Compare provider contract | command | Consumer team |
 
 ## Outbound messages
 
@@ -78,6 +81,9 @@ provider component owns a machine-readable contract for its wire surface.
 | Artifact issue synchronized | event | Repository maintainer |
 | Acceptance notification sent | event | Repository maintainer |
 | Deployment notification sent | event | Repository maintainer |
+| Provider contract published | event | Consumer team |
+| Breaking change detected | event | Consumer team |
+| Contract gate failed | event | Provider team |
 
 ## Aggregates
 
