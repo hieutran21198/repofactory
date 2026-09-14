@@ -7,7 +7,8 @@
 ## Purpose
 
 This context combines repository options into a repository blueprint. It decides which files and
-working rules the factory supplies to a generated repository.
+working rules the factory supplies to a generated repository. It also holds the rule that each
+provider component owns a machine-readable contract for its wire surface.
 
 ## Ubiquitous language
 
@@ -36,6 +37,9 @@ working rules the factory supplies to a generated repository.
 | Version | The full requirements, specifications, and decisions of a feature after one change, named major.minor.patch. |
 | Current version | The version that the feature README names. |
 | Change type | The kind of a change: Requirements, Specifications, Decisions, or Correction. |
+| Provider contract | A machine-readable description of the wire surface of one component, owned by the provider team. |
+| Consumer team | A team that uses the wire surface of a provider component. |
+| Breaking change | A contract change that forces a consumer team to change its code. |
 
 ## Business rules
 
@@ -55,6 +59,9 @@ working rules the factory supplies to a generated repository.
 - A version is produced by copy only. A file under `versions/` is never edited.
 - A file under `versions/` does not make an artifact issue.
 - The artifact master controls one phase at a time and waits for user approval before each planned build.
+- Each provider component owns one machine-readable contract for its wire surface.
+- A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
+- A consumer team finds the current contract of each provider that it uses.
 
 ## Inbound messages
 

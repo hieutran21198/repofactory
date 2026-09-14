@@ -29,3 +29,6 @@ write two rows.
 | Version | context-factory | The full requirements, specifications, and decisions of a feature after one change, in `versions/<version>/`. Named major.minor.patch. | Change |
 | Current version | context-factory | The version that the feature README names. It gives the current state of the feature. | Status |
 | Change type | context-factory | The kind of a change: Requirements, Specifications, Decisions, or Correction. It gives the part of the version number that the change bumps. | Artifact type |
+| Provider contract | context-factory | A machine-readable description of the wire surface of one polyrepo component, owned by the provider team. | Wire format |
+| Consumer team | context-factory | A team that uses the wire surface of a provider component. | Provider team |
+| Breaking change | context-factory | A contract change that forces a consumer team to change its code. | Compatible change |
