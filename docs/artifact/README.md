@@ -16,5 +16,6 @@ before you add or change a feature.
 | [Documentation site](feat-docs-site/README.md) | 4.0.3 | Renders documentation and generated assets as a website, then publishes it with a generated workflow. |
 | [DDD review skill](feat-ddd-review-skill/README.md) | 1.0.0 | Ships one shared skill to review DDD artifacts in generated projects. |
 | [Artifact versions](feat-artifact-versions/README.md) | 1.0.0 | Makes a change the unit of work on a feature and adds a version folder that holds the full state of the feature. |
+| [Artifact master](feat-artifact-master/README.md) | none | Coordinates each artifact-driven change and gives the user useful information at each phase. |
 
 Read `versions/<current>/` of a feature for its state. Read `changes/` of a feature for its history.

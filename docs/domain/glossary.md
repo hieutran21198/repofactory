@@ -9,6 +9,7 @@ write two rows.
 | Acceptance notification | context-factory | One team message that summarizes accepted artifact changes from a merged pull request. | Artifact issue |
 | Artifact issue | context-factory | A project issue that represents one accepted feature artifact file. | Pull request |
 | Artifact proposal | context-factory | An artifact change in a pull request that has not merged. | Accepted artifact |
+| Artifact master | context-factory | The coordinator that controls one artifact-driven change and routes each phase to its owner. | Phase owner |
 | Azure Pipelines | context-factory | An Azure DevOps CI provider that runs factory workflows. | GitHub Actions |
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |
 | Provider | context-factory | An external system that receives artifact issues. | CI provider |
@@ -22,6 +23,8 @@ write two rows.
 | Generated documentation asset | context-factory | A file that a workflow makes and adds to a documentation site static directory. | Authored Markdown page |
 | Deployment notification | context-factory | One team message that reports a successful documentation site deployment. | Acceptance notification |
 | Notification provider | context-factory | An external system that receives a team notification. | Project-management provider |
+| Phase handoff | context-factory | A short report of a completed phase build and the input for the next phase. | Phase plan |
+| Phase plan | context-factory | A read-only proposal that defines one phase build and waits for user approval. | Implementation plan |
 | Change | context-factory | One unit of work on a feature, in `changes/change-<name>/`. It holds the reason and the artifacts that change. | Version |
 | Version | context-factory | The full requirements, specifications, and decisions of a feature after one change, in `versions/<version>/`. Named major.minor.patch. | Change |
 | Current version | context-factory | The version that the feature README names. It gives the current state of the feature. | Status |

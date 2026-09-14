@@ -14,6 +14,7 @@ working rules the factory supplies to a generated repository.
 | Term | Meaning |
 | --- | --- |
 | Accepted artifact | A feature artifact on the default branch after a pull request merges. |
+| Artifact master | The coordinator that controls one artifact-driven change and routes each phase to its owner. |
 | Acceptance notification | One team message that summarizes accepted artifact changes from a merged pull request. |
 | Artifact issue | A project issue that represents one accepted feature artifact file. |
 | Azure Pipelines | An Azure DevOps CI provider that runs factory workflows. |
@@ -29,6 +30,8 @@ working rules the factory supplies to a generated repository.
 | Generated documentation asset | A file that a workflow makes and adds to a documentation site static directory. |
 | Deployment notification | One team message that reports a successful documentation site deployment. |
 | Notification provider | An external system that receives a team notification. |
+| Phase handoff | A short report of a completed phase build and the input for the next phase. |
+| Phase plan | A read-only proposal that defines one phase build and waits for user approval. |
 | Change | One unit of work on a feature. It holds the reason and the artifacts that change. |
 | Version | The full requirements, specifications, and decisions of a feature after one change, named major.minor.patch. |
 | Current version | The version that the feature README names. |
@@ -51,6 +54,7 @@ working rules the factory supplies to a generated repository.
 - Each unit of work on a feature is a change. The first change of a feature is `change-initial`.
 - A version is produced by copy only. A file under `versions/` is never edited.
 - A file under `versions/` does not make an artifact issue.
+- The artifact master controls one phase at a time and waits for user approval before each planned build.
 
 ## Inbound messages
 
