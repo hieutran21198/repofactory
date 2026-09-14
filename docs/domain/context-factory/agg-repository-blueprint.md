@@ -32,6 +32,9 @@ adapter but does not activate a composition.
 - A documentation site with the `azure-static-web-app` target names the secret that holds the Static Web App deployment token.
 - A documentation site extension adds typed static directories, watch paths, and build steps without replacing a factory-owned file.
 - An enabled deployment notification selects one or more supported notification providers and their settings.
+- An artifact-driven repository has one canonical artifact-master role body.
+- Each selected harness receives a rendered artifact-master role with the canonical coordination and message contract.
+- The artifact-master skill identifies the rendered role of each supported harness and does not repeat the canonical role body.
 
 ## Corrective policies
 
@@ -53,7 +56,7 @@ adapter but does not activate a composition.
 
 | Event | Payload |
 | --- | --- |
-| Repository blueprint composed | Selected domains, compositions, and generated file paths. |
+| Repository blueprint composed | Selected domains, compositions, generated file paths, and rendered artifact-master role paths. |
 
 ## References by identity
 
