@@ -76,6 +76,8 @@ provider component owns a machine-readable contract for its wire surface.
 | Publish provider contract | command | Provider team |
 | Run contract gates | command | Provider team |
 | Compare provider contract | command | Consumer team |
+| Constraint returned | event | Implementation expert |
+| Choice approved | event | User |
 
 ## Outbound messages
 
@@ -88,6 +90,10 @@ provider component owns a machine-readable contract for its wire surface.
 | Provider contract published | event | Consumer team |
 | Breaking change detected | event | Consumer team |
 | Contract gate failed | event | Provider team |
+| Release routed | event | Artifact release expert |
+| Contract written | event | Implementation expert |
+| Option recommended | event | User |
+| Work sequenced | event | Implementation expert |
 
 ## Aggregates
 

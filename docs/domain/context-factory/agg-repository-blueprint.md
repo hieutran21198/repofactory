@@ -47,6 +47,13 @@ adapter but does not activate a composition.
 - An artifact-driven repository has one canonical artifact-master role body.
 - Each selected harness receives a rendered artifact-master role with the canonical coordination and message contract.
 - The artifact-master skill identifies the rendered role of each supported harness and does not repeat the canonical role body.
+- An artifact-driven repository has one canonical artifact-release-expert role body.
+- Each selected harness receives a rendered artifact-release-expert role with the copy-only phase 5 contract.
+- The artifact master routes phase 5 to the artifact release expert after the solution expert confirms readiness.
+- The solution expert owns each specification and final decision. An implementation expert returns feasibility constraints only.
+- A phase 1 or phase 2 expert gets user approval before a final write when it finds a correction or better path.
+- Each phase 3 task records its dependencies and one `can-parallel` answer.
+- Phase 4 obeys task dependencies, runs permitted tasks in parallel, and keeps one commit.
 - An artifact-driven repository receives one self-contained mixture-of-experts wiki page for its selected repository architecture.
 - Each provider component with a wire surface owns one machine-readable contract for its wire surface.
 - The contract describes each operation that a consumer team can use.
@@ -79,7 +86,7 @@ adapter but does not activate a composition.
 
 | Event | Payload |
 | --- | --- |
-| Repository blueprint composed | Selected domains, compositions, generated file paths, and rendered artifact-master role paths. |
+| Repository blueprint composed | Selected domains, compositions, generated file paths, and rendered built-in role paths. |
 | Provider contract published | Provider identity, release tag, wire surface, contract language, and contract asset path. |
 | Breaking change detected | Provider identity, old and new release tags, and each added, altered, and removed operation. |
 | Contract gate failed | Gate name, operation identifiers, and the failure cause. |
