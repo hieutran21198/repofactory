@@ -362,14 +362,21 @@ let
     })
   ];
 
+  # The roles with a DDD chapter. The artifact release expert has no DDD step, so it has no
+  # chapter and stays out of this list.
   roles = [
     "requirement-expert"
     "solution-expert"
     "artifact-master"
   ];
+  # All built-in roles that each selected harness renders.
+  builtinRoles = roles ++ [
+    "artifact-release-expert"
+  ];
   expertRoles = [
     "requirement-expert"
     "solution-expert"
+    "artifact-release-expert"
   ];
   base = role: builtins.readFile (../_assets/agent/role + "/${role}/ROLE.md");
   chapter = arch: role: builtins.readFile (../_assets + "/${arch}/ddd/agent/role/${role}/ROLE.md");
@@ -791,7 +798,8 @@ let
     ".*## Rules.*"
     ".*services/.*src/.*"
     ".*requirement expert.*phase 1.*"
-    ".*solution expert.*phases 2, 3, and 5.*"
+    ".*solution expert owns phases 2 and 3.*"
+    ".*artifact release expert owns phase 5.*"
     ".*Do not change.*"
   ];
   # The roles, the guidance, and the skills describe the change and version model.
@@ -813,9 +821,36 @@ let
       ".*versions/<current>.*"
       ".*changes/change-<name>.*"
     ] (base role)
-  ) roles;
-  solutionExpertHasPhaseFive =
-    builtins.match ".*## Procedure: phase 5, version.*" (base "solution-expert") != null;
+  ) builtinRoles;
+  releaseRoleOnlyBase =
+    builtins.all
+      (arch: instruction configs."${arch}On" "artifact-release-expert" == base "artifact-release-expert")
+      [
+        "multiple"
+        "single"
+      ];
+  releaseRoleContent = matchesAll [
+    ".*## Procedure: phase 5, version.*"
+    ".*Copy the content of `versions/<from>/` into it.*"
+    ".*Copy the `requirements/`, `specifications/`, and `decisions/` folders of the change over the new version.*"
+    ".*Delete from `versions/<to>/` each path under `## Removed artifacts`.*"
+    ".*readiness-confirmed.*"
+    ".*must be `true`.*"
+    ".*Set the `\\*\\*Current version:\\*\\*` line to `<to>`.*"
+    ".*Set each link in `## Current artifacts` to the `versions/<to>/` path.*"
+    ".*Set the row of the change in the `## Versions` table.*"
+    ".*Verify the copy.*"
+    ".*Stop before the commit when the result differs from the expected content.*"
+    ".*Copy and delete only. Do not edit a copied artifact.*"
+    ".*Do not run a domain-driven design step.*"
+    ".*Use a low-cost model or a script with verification.*"
+  ] (base "artifact-release-expert");
+  solutionExpertReadinessGate =
+    builtins.match ".*## Procedure: phase 5, version.*" (base "solution-expert") == null
+    && builtins.match ".*## Procedure: phase 5, readiness gate.*" (base "solution-expert") != null
+    &&
+      builtins.match ".*readiness of the release to the artifact master.*" (base "solution-expert")
+      != null;
   requirementExpertHasNoLegacyProcedure =
     builtins.match ".*## Change to a feature whose code exists.*" (base "requirement-expert") == null;
   roleTemplateHasNoRootTasks =
@@ -833,13 +868,18 @@ let
   ) agentsSources;
   dddPageHasVersionRow = builtins.all (
     source:
-    builtins.match ".*\\| 5 Version \\| Solution expert \\|.*" (builtins.readFile source) != null
+    builtins.match ".*\\| 5 Version \\| Artifact release expert \\|.*" (builtins.readFile source)
+    != null
   ) dddPageSources;
   dddReviewNamesPhaseFive =
-    builtins.match ".*solution expert.*phases 2, 3, and 5.*" dddReviewText != null;
+    builtins.match ".*solution expert owns phases 2 and 3.*" dddReviewText != null
+    && builtins.match ".*artifact release expert owns phase 5.*" dddReviewText != null;
   descriptions =
-    builtins.match ".*phases 2, 3, and 5.*" configs.multipleOn.factory.domain.agent.role.builder.solution-expert.description
-    != null;
+    builtins.match ".*phases 2 and 3.*readiness gate.*" configs.multipleOn.factory.domain.agent.role.builder.solution-expert.description
+    != null
+    &&
+      builtins.match ".*Owns the copy.*readiness.*" configs.multipleOn.factory.domain.agent.role.builder.artifact-release-expert.description
+      != null;
   coordinatorModeAll =
     builtins.all
       (cfg: cfg.factory.domain.agent.role.builder.artifact-master.harness.opencode.mode == "all")
@@ -887,9 +927,12 @@ let
     ".*A plan is read-only.*"
     ".*explicit user approval.*"
     ".*Route phase 1 to the requirement expert.*"
-    ".*Route phases 2, 3, and 5 to the solution expert.*"
+    ".*Route phases 2 and 3 to the solution expert.*"
+    ".*Route phase 5 to the artifact release expert after the solution expert confirms readiness.*"
+    ".*does not copy the version.*"
     ".*Route each phase 4 component task to its implementation expert.*"
     ".*ask the solution expert to help.*select an owner.*"
+    ".*can-parallel.*answer.*ordered work.*"
     ".*Do not write requirements, specifications, decisions, tasks, code, tests, or versions.*"
     ".*Each build ends with one commit for that phase.*"
     ".*Phase 4 has no Plan-P4.*"
@@ -981,6 +1024,32 @@ let
         codexRole
       ];
   unselectedMasterRoleOmitted = roleRender [ ] == { };
+  opencodeRelease = (roleRender [ "opencode" ]).".opencode/agents/artifact-release-expert.md".text;
+  claudeRelease = (roleRender [ "claude" ]).".claude/agents/artifact-release-expert.md".text;
+  codexRelease =
+    (roleRender [ "codex" ]).".codex/agents/artifact-release-expert.toml".toml.developer_instructions;
+  renderedReleaseRolesMatch =
+    builtins.all
+      (
+        text:
+        matchesAll [
+          ".*## Procedure: phase 5, version.*"
+          ".*Copy and delete only. Do not edit a copied artifact.*"
+          ".*Do not run a domain-driven design step.*"
+          ".*Use a low-cost model or a script with verification.*"
+          ".*Stop before the commit when the result differs from the expected content.*"
+        ] text
+      )
+      [
+        opencodeRelease
+        claudeRelease
+        codexRelease
+      ];
+  renderedBuiltinRoles =
+    let
+      files = roleRender [ "opencode" ];
+    in
+    builtins.all (role: builtins.hasAttr ".opencode/agents/${role}.md" files) builtinRoles;
   masterSkillPaths = matchesAll [
     ".*\\.opencode/agents/artifact-master\\.md.*"
     ".*\\.claude/agents/artifact-master\\.md.*"
@@ -1034,6 +1103,9 @@ let
     ".*## Phase routing.*"
     ".*## Plan-Pn then Build-Pn.*"
     ".*## Two kinds of plan.*"
+    ".*## Contract-driven specifications.*"
+    ".*## Option interview.*"
+    ".*## Parallel implementation.*"
     ".*## Harness rendering.*"
     ".*## Skill load.*"
     ".*## Related documentation.*"
@@ -1041,24 +1113,43 @@ let
   moexTerms = matchesAll [
     ".*Artifact master \\| The role that coordinates one artifact-driven change and routes each phase\\..*"
     ".*Content expert \\| A role that owns the content of one or more phases\\..*"
+    ".*Artifact release expert \\| The role that owns the mechanical phase 5 copy\\..*"
+    ".*Contract \\| A testable interface, event, or data model in a specification\\..*"
+    ".*Constraint \\| A feasibility limit with one responsible owner\\..*"
+    ".*`can-parallel` \\| The yes-or-no phase 3 answer that permits or prevents parallel task work\\..*"
     ".*Harness \\| A coding agent product that reads the role files and skills of a project\\..*"
     ".*Role \\| An agent persona with one instruction body and one harness declaration\\..*"
     ".*Skill \\| A folder of instructions that a harness loads on request\\..*"
-    ".*Canonical role body \\| The shared source of the artifact-master coordination contract\\..*"
+    ".*Canonical role body \\| The shared source of one role contract\\..*"
     ".*Rendered role \\| The canonical role body in the file format of one harness\\..*"
   ] moexCanonicalText;
   moexRoleRows = matchesAll [
     ".*\\| Artifact master \\| Coordination only\\. It writes no phase content\\. \\|.*"
     ".*\\| Requirement expert \\| Requirements in phase 1\\. \\|.*"
-    ".*\\| Solution expert \\| Specifications, decisions, tasks, and versions in phases 2, 3, and 5\\. \\|.*"
-    ".*\\| Implementation expert \\| Code and tests for one component in phase 4\\. \\|.*"
+    ".*\\| Solution expert \\| Specifications and decisions in phase 2, tasks in phase 3, and the version gate\\. \\|.*"
+    ".*\\| Implementation expert \\| Feasibility constraints in phase 2, and code and tests for one component in phase 4\\. \\|.*"
+    ".*\\| Artifact release expert \\| The copy-only version output in phase 5\\. \\|.*"
   ] moexCanonicalText;
   moexPhaseRows = matchesAll [
     ".*\\| P1 Requirements \\| Requirement expert \\|.*"
     ".*\\| P2 Specifications \\| Solution expert \\|.*"
     ".*\\| P3 Plan \\| Solution expert \\|.*"
     ".*\\| P4 Implementation \\| Implementation expert for each component \\|.*"
-    ".*\\| P5 Version \\| Solution expert \\|.*"
+    ".*\\| P5 Version \\| Artifact release expert \\|.*"
+  ] moexCanonicalText;
+  moexReadiness =
+    builtins.match ".*The solution expert confirms release readiness only\\..*" moexCanonicalText
+    != null
+    &&
+      builtins.match ".*The solution expert does not copy the[[:space:]]+version\\..*" moexCanonicalText
+      != null;
+  moexEvents = matchesAll [
+    ".*Release routed.*"
+    ".*Contract written.*"
+    ".*Constraint returned.*"
+    ".*Option recommended.*"
+    ".*Choice approved.*"
+    ".*Work sequenced.*"
   ] moexCanonicalText;
   moexHarnesses = matchesAll [
     ".*OpenCode.*"
@@ -1140,7 +1231,9 @@ assert dddReviewFileExists;
 assert dddReviewFrontmatter;
 assert dddReviewContent;
 assert rolesNameVersions;
-assert solutionExpertHasPhaseFive;
+assert releaseRoleOnlyBase;
+assert releaseRoleContent;
+assert solutionExpertReadinessGate;
 assert requirementExpertHasNoLegacyProcedure;
 assert roleTemplateHasNoRootTasks;
 assert agentsNameVersions;
@@ -1160,6 +1253,8 @@ assert masterRolePlanMessage;
 assert masterRoleMessages;
 assert renderedMasterRolesMatch;
 assert unselectedMasterRoleOmitted;
+assert renderedReleaseRolesMatch;
+assert renderedBuiltinRoles;
 assert masterSkillPaths;
 assert masterSkillDoesNotCopyRole;
 assert moexDelivery;
@@ -1170,6 +1265,8 @@ assert moexSections;
 assert moexTerms;
 assert moexRoleRows;
 assert moexPhaseRows;
+assert moexReadiness;
+assert moexEvents;
 assert moexHarnesses;
 assert moexSelfContained;
 {
@@ -1226,7 +1323,9 @@ assert moexSelfContained;
     dddReviewFrontmatter
     dddReviewContent
     rolesNameVersions
-    solutionExpertHasPhaseFive
+    releaseRoleOnlyBase
+    releaseRoleContent
+    solutionExpertReadinessGate
     requirementExpertHasNoLegacyProcedure
     roleTemplateHasNoRootTasks
     agentsNameVersions
@@ -1246,6 +1345,8 @@ assert moexSelfContained;
     masterRoleMessages
     renderedMasterRolesMatch
     unselectedMasterRoleOmitted
+    renderedReleaseRolesMatch
+    renderedBuiltinRoles
     masterSkillPaths
     masterSkillDoesNotCopyRole
     moexDelivery
@@ -1256,6 +1357,8 @@ assert moexSelfContained;
     moexTerms
     moexRoleRows
     moexPhaseRows
+    moexReadiness
+    moexEvents
     moexHarnesses
     moexSelfContained
     ;

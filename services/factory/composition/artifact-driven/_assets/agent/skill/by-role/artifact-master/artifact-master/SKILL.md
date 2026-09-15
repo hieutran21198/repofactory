@@ -17,7 +17,8 @@ Use this skill when the user wants to start, continue, or finish an artifact-dri
    - Codex: `.codex/agents/artifact-master.toml` (delegated role).
 2. Use the role procedure: `Plan-Pn then Build-Pn`. Do one phase at a time.
 3. Keep each plan read-only. Wait for explicit user approval before its build.
-4. Route phase 1 to the requirement expert. Route phases 2, 3, and 5 to the solution expert.
+4. Route phase 1 to the requirement expert. Route phases 2 and 3 to the solution expert. Route
+   phase 5 to the artifact release expert after the solution expert confirms readiness.
 5. Route phase 4 tasks to the implementation expert of each component. Ask the solution expert
    to help select an owner when a component has no implementation expert.
 6. Do not make Plan-P4. Use the approved phase 3 implementation plan as the Phase 4 gate.

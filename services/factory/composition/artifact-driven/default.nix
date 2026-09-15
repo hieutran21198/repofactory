@@ -364,7 +364,8 @@ in
 
               builtinRoles = {
                 requirement-expert = mkRole "requirement-expert" "Gathers the business need and writes the change summary and the requirements of a feature. Owns phase 1 of the artifact-driven documentation model. Use when a new feature starts, or when a change to a feature starts.";
-                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2, 3, and 5 of the artifact-driven documentation model. Keeps the versions of each feature. Works with the implementation expert of each component that the solution touches.";
+                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2 and 3 of the artifact-driven documentation model, and the phase 5 readiness gate. Works with the implementation expert of each component that the solution touches.";
+                artifact-release-expert = mkRole "artifact-release-expert" "Copies one feature version in phase 5. Owns the copy, the replacement, the deletion, and the feature README update. Does not edit a copied artifact and does not run a design step. Use when phase 5 starts, after the solution expert confirms readiness.";
                 artifact-master = mkCoordinatorRole "artifact-master" "Coordinates one artifact-driven change phase by phase with Plan-Pn then Build-Pn. Owns coordination only and delegates content to the owning expert. Use for coordinating a change, planning then building a phase, or running the next artifact phase.";
               };
 

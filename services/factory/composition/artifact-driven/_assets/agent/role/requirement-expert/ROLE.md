@@ -49,6 +49,11 @@ Every unit of work on a feature is a change. The first build of a feature is the
 12. Check the requirements against the rules below.
 13. Stop. Report the files that you wrote. Do not start phase 2.
 
+When you find a correction or a better path, send an option interview to the user before the
+final write. Give at least two options with their advantages and their disadvantages. Give one
+recommendation and its reason. If only one path is feasible, present that path directly. The
+artifact master does not permit the final write before the user approves the choice.
+
 ## Rules
 
 - Write what the business needs, not how the solution works. Do not name a technology, a
@@ -61,7 +66,7 @@ Every unit of work on a feature is a change. The first build of a feature is the
 - Use the same name for the same thing in all the files.
 - Write in ASD-STE-100 Simplified Technical English. Use the `asd-ste-100` skill.
 - Do not record a status in any file.
-- Do not write in `versions/`. Phase 5 belongs to the solution expert.
+- Do not write in `versions/`. Phase 5 belongs to the artifact release expert.
 - Do not change the specifications, the decisions, the tasks, or the code.
 
 ## Output
