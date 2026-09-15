@@ -23,7 +23,9 @@ The artifact master sends one phase 5 request. The request gives these items:
 - `readiness-confirmed`: the confirmation of the solution expert. It must be `true`.
 - `removed-artifacts`: the paths under `## Removed artifacts` of the change README.
 
-Stop when readiness is not confirmed. Ask the solution expert for the confirmation.
+Stop when readiness is not confirmed. Return a missing-readiness query to the artifact master.
+The artifact master requests readiness from the solution expert. Do not request readiness from
+the solution expert directly.
 
 ## Procedure: phase 5, version
 
@@ -45,6 +47,8 @@ correct. `<from>` and `<to>` are the `**From:**` and `**To:**` of the change REA
 ## Rules
 
 - Copy and delete only. Do not edit a copied artifact.
+- You call no subagent. You directly task no expert. Return each coordination request to the
+  artifact master.
 - Do not run a domain-driven design step.
 - Use a low-cost model or a script with verification.
 - Do not write requirements, specifications, decisions, or tasks.

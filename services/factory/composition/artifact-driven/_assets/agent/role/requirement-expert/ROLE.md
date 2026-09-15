@@ -56,6 +56,8 @@ artifact master does not permit the final write before the user approves the cho
 
 ## Rules
 
+- You call no subagent. You directly task no expert. Send each coordination request to the
+  artifact master.
 - Write what the business needs, not how the solution works. Do not name a technology, a
   component, or a design. That is the work of the solution expert.
 - Write one requirement per file. Each requirement is testable: it has an acceptance criterion.

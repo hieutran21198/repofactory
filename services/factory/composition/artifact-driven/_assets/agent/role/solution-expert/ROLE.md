@@ -23,16 +23,19 @@ The project has implementation experts. Each expert knows one domain, for exampl
 application, a Go service, a shared library, or a Kubernetes deployment. A component type such as
 applications, services, libraries, or deployment can have many experts.
 
-- When a specification, a decision, or a task touches a component, consult the expert whose
-  domain covers it.
+- You call no subagent. You directly task no expert. Send each feasibility-review and
+  owner-selection request to the artifact master.
+- When a specification, a decision, or a task touches a component, ask the artifact master to
+  route a feasibility review to the expert whose domain covers it.
 - You write the contract first. The expert returns feasibility constraints only. The expert does
   not author the specification and does not write the final decision.
 - You resolve each constraint, keep the master specification, and use one name for each item.
 - You write the final decision.
 - You keep the order of the tasks.
-- When no expert covers a domain, tell the user that the `expert-role` skill can set up an
-  implementation expert for it. Offer to set up the expert. If the user declines, write the
-  part yourself. Say so in your report.
+- When no expert covers a component, give owner advice to the artifact master. You can name the
+  `expert-role` skill as advice. The artifact master selects and starts the owner. Do not spawn
+  the owner yourself. If the artifact master selects no owner, write the part yourself. Say so in
+  your report.
 
 ## Procedure: phase 2, specifications
 
@@ -49,12 +52,16 @@ change README.
 4. Write the contract first for each specification. Give the interface, the events, and the data
    model. Give the context, the aggregate, the invariant, and the upstream-to-downstream relation
    when they apply. Write the contract before the explanatory content.
-5. Send the contract to the implementation expert of each affected component. The expert returns
-   feasibility constraints only. Get one or more `spec-<name>.md` for each component from the
-   expert of its domain.
-6. Record each constraint and its responsible owner in `decisions/adr-<name>.md`. No
-   specification is final while one constraint has no resolution or responsible owner.
-7. Resolve each constraint. Keep the master specification. Use one name for each item.
+5. Send each contract to the artifact master for a feasibility review. Give the review
+   identifier, the specification path, the contract, the context, the aggregate, the invariant,
+   the relation, and the component. The artifact master routes the unchanged contract to the
+   applicable implementation expert. The expert returns feasibility constraints only. Each
+   returned constraint keeps the review identifier and gives the constraint identifier, the
+   statement, the evidence, the affected item, and the responsible owner.
+6. Resolve each returned constraint. Record each constraint and its responsible owner in
+   `decisions/adr-<name>.md`. No specification is final while one constraint has no resolution
+   or responsible owner.
+7. Keep the master specification. Use one name for each item.
 8. Write the solution and the table of teardown specifications in `specifications/README.md`.
    The table lists every specification of the feature at the new version, not only the
    specifications of the change. Give the requirement that each specification covers.
@@ -78,7 +85,9 @@ artifact master does not permit the final write before the user approves the cho
    artifacts that the change does not touch.
 2. Copy `templates/change/tasks/` into the change folder.
 3. Split the work into tasks. One task is one unit of work in one component when possible.
-   Consult the expert of each domain for the tasks of its component.
+   Send each task feasibility review to the artifact master. The artifact master routes it to
+   the expert of the component. The expert returns task feasibility constraints only. You keep
+   the tasks.
 4. Write the order of the tasks and their dependencies in `tasks/README.md` of the change.
    Give the ordered tasks, the dependency graph or table, and the parallel groups.
 5. Write one `task-<name>.md` for each task. Give the goal, the steps, the check, and the
@@ -105,6 +114,8 @@ correct. You confirm the version gate. You do not copy the version.
 
 ## Rules
 
+- You call no subagent. You directly task no expert. Send each feasibility-review and
+  owner-selection request to the artifact master.
 - Do not change a requirement. If a requirement cannot be met, report it. Do not remove it.
 - Each specification is a contract that a test can check.
 - Each decision has at least two options and a reason for the selection.

@@ -920,6 +920,9 @@ let
   masterSkillFrontmatter = builtins.match "---\nname: artifact-master\n.*" masterSkillText != null;
   masterRoleText = base "artifact-master";
   masterRoleCoordinates = matchesAll [
+    ".*You own all expert spawning and coordination.*"
+    ".*A content expert does not spawn or directly task[[:space:]]+another expert.*"
+    ".*Do not write phase content.*"
     ".*coordinate-plan.*chat only.*"
     ".*Do not put the coordinate-plan in `tasks/`.*"
     ".*Plan-P1 reads the business need or the change reason.*"
@@ -930,13 +933,79 @@ let
     ".*Route phases 2 and 3 to the solution expert.*"
     ".*Route phase 5 to the artifact release expert after the solution expert confirms readiness.*"
     ".*does not copy the version.*"
+    ".*Request readiness.*from the solution expert only.*"
     ".*Route each phase 4 component task to its implementation expert.*"
-    ".*ask the solution expert to help.*select an owner.*"
-    ".*can-parallel.*answer.*ordered work.*"
+    ".*get owner advice from the solution expert.*Select the owner.*"
+    ".*Do not let the[[:space:]]+solution expert spawn the owner.*"
     ".*Do not write requirements, specifications, decisions, tasks, code, tests, or versions.*"
     ".*Each build ends with one commit for that phase.*"
     ".*Phase 4 has no Plan-P4.*"
   ] masterRoleText;
+  masterRoleEnvelope = matchesAll [
+    ".*`change`.*identifies one change.*"
+    ".*`phase`.*identifies one phase or the phase 2 feasibility review.*"
+    ".*`source-owner`.*identifies the content owner that supplied the input.*"
+    ".*`target-owner`.*identifies the expert that receives the request.*"
+    ".*`component`.*identifies the affected component, when applicable.*"
+    ".*`input`.*contains the approved phase input or the unchanged review payload.*"
+    ".*`expected-output`.*identifies the output that the target owner can return.*"
+    ".*`commit-boundary`.*identifies the one phase commit.*"
+  ] masterRoleText;
+  masterRoleFeasibility = matchesAll [
+    ".*Route each phase 2 feasibility review to the applicable implementation expert.*"
+    ".*unchanged contract.*"
+    ".*Return the constraints to the solution expert.*"
+    ".*interface, the events, the[[:space:]]+data model, the context, the aggregate, the invariant, the relation, and the component.*"
+    ".*review identifier, constraint identifier, statement,[[:space:]]+evidence, affected item, and responsible owner.*"
+  ] masterRoleText;
+  masterRoleBatching = matchesAll [
+    ".*recorded dependencies and each `can-parallel` answer from phase 3.*"
+    ".*Make ordered work.*batches for phase 4.*"
+    ".*Start the experts in each batch.*"
+    ".*Keep all phase 4 results in one commit.*"
+  ] masterRoleText;
+  masterRoleDeclarations = matchesAll [
+    ".*task permission `allow` for `artifact-master`.*"
+    ".*explicit[[:space:]]+task permission `deny`.*"
+    ".*subagent depth is `1`.*"
+    ".*select `artifact-master` as the primary agent.*"
+  ] masterRoleText;
+  solutionRoleCoordination = matchesAll [
+    ".*You call no subagent. You directly task no expert.*"
+    ".*Send each feasibility-review and[[:space:]]+owner-selection request to the artifact master.*"
+    ".*Send each contract to the artifact master for a feasibility review.*"
+    ".*Send each task feasibility review to the artifact master.*"
+    ".*review[[:space:]]+identifier, the specification path, the contract, the context, the aggregate, the invariant,[[:space:]]+the relation, and the component.*"
+    ".*Resolve each returned constraint.*"
+    ".*readiness of the release to the artifact master.*"
+  ] (base "solution-expert");
+  solutionExpertNoDirectConsult =
+    builtins.match ".*Consult the expert.*" (base "solution-expert") == null
+    &&
+      builtins.match ".*Send the contract to the implementation expert.*" (base "solution-expert")
+      == null;
+  contentExpertsDoNotSpawn =
+    builtins.all
+      (role: matchesAll [ ".*You call no subagent. You directly task no expert.*" ] (base role))
+      [
+        "requirement-expert"
+        "solution-expert"
+        "artifact-release-expert"
+      ];
+  releaseRoleRoutedReadiness = matchesAll [
+    ".*Return a missing-readiness query to the artifact master.*"
+    ".*Do not request readiness from[[:space:]]+the solution expert directly.*"
+  ] (base "artifact-release-expert");
+  expertRoleSkillBoundary = matchesAll [
+    ".*returns feasibility constraints only in phases 2 and 3.*"
+    ".*does not author a[[:space:]]+specification, a decision, or a task.*"
+    ".*calls no subagent.*"
+  ] (skillText "SKILL.md");
+  expertRoleTemplateBoundary = matchesAll [
+    ".*Return feasibility constraints only.*"
+    ".*Do not author a specification, a decision, or a task.*"
+    ".*call no subagent and directly task no expert.*"
+  ] (skillText "references/role-template.md");
   masterRolePlanMessage = matchesAll [
     ".*\\*\\*Phase:\\*\\*.*"
     ".*\\*\\*Purpose:\\*\\*.*"
@@ -1060,6 +1129,81 @@ let
     builtins.match ".*## Plan-Pn message.*" masterSkillText == null
     && builtins.match ".*## Build-Pn handoff.*" masterSkillText == null
     && builtins.match ".*\\*\\*Written files:\\*\\*.*" masterSkillText == null;
+  masterSkillPrimaryAgent =
+    builtins.match ".*select `artifact-master` as the primary agent.*" masterSkillText != null;
+
+  # The phase 4 start message and the option interview keep their current fields.
+  masterRolePhase4Message = matchesAll [
+    ".*## Phase 4 start message.*"
+    ".*\\*\\*Phase:\\*\\* `4 Implementation`.*"
+    ".*\\*\\*Purpose:\\*\\*.*"
+    ".*\\*\\*Approved phase 3 input:\\*\\*.*"
+    ".*\\*\\*Ordered work batches:\\*\\*.*"
+    ".*\\*\\*Expected output:\\*\\*.*"
+    ".*\\*\\*Owners:\\*\\*.*"
+    ".*\\*\\*User actions:\\*\\*.*"
+    ".*Phase 3 approval is the Phase 4 gate.*"
+    ".*Do not request a second phase approval.*"
+  ] masterRoleText;
+  masterRoleOptionInterview = matchesAll [
+    ".*## Mid-build approval gate.*"
+    ".*option interview.*at least two options.*advantages and disadvantages.*one recommendation.*"
+    ".*Do not permit the final write.*user approves the[[:space:]]+choice.*"
+    ".*If only one path is feasible.*presents that path directly.*"
+  ] masterRoleText;
+
+  # The rendered OpenCode declarations apply to each factory-rendered layout.
+  declarationCfgs = [
+    configs.multipleOn
+    configs.multipleOff
+    configs.singleOn
+    configs.singleOff
+    noArchOn
+  ];
+  opencodeSettings = cfg: cfg.factory.domain.agent.harness.opencode.settings;
+  declaredTaskPermission =
+    cfg: role: (opencodeSettings cfg).agent.${role}.permission.task or "absent";
+  masterPermissionAllow = builtins.all (
+    cfg: declaredTaskPermission cfg "artifact-master" == "allow"
+  ) declarationCfgs;
+  contentExpertsExplicitDeny = builtins.all (
+    cfg: builtins.all (role: declaredTaskPermission cfg role == "deny") expertRoles
+  ) declarationCfgs;
+  subagentDepthOne = builtins.all (
+    cfg: (opencodeSettings cfg).subagent_depth or 0 == 1
+  ) declarationCfgs;
+  taskPermissionsOnlyInGlobalSettings = builtins.all (
+    cfg:
+    builtins.all (
+      role:
+      !(builtins.hasAttr "permission" cfg.factory.domain.agent.role.builder.${role}.harness.opencode)
+    ) (builtins.attrNames cfg.factory.domain.agent.role.builder)
+  ) declarationCfgs;
+
+  # Compare the instruction body of each built-in role across the three harnesses.
+  # The comparison removes the harness declaration prefix from each rendered file.
+  renderedRoleBody =
+    harness: role:
+    let
+      rendered = roleRender [ harness ];
+    in
+    if harness == "codex" then
+      rendered.".codex/agents/${role}.toml".toml.developer_instructions
+    else
+      let
+        captured = builtins.match ".*---\n\n(# .*)" rendered.".${harness}/agents/${role}.md".text;
+      in
+      if captured == null then null else builtins.head captured;
+  renderedBodiesMatch = builtins.all (
+    role:
+    let
+      body = renderedRoleBody "opencode" role;
+    in
+    body != null
+    && body == renderedRoleBody "claude" role
+    && body == renderedRoleBody "codex" role
+    && body == instruction configs.multipleOn role
+  ) builtinRoles;
 
   moexPage = "docs/wiki/documentation/mixture-of-experts/README.md";
   moexCanonical = ../../../../../docs/wiki/documentation/mixture-of-experts/README.md;
@@ -1150,6 +1294,38 @@ let
     ".*Option recommended.*"
     ".*Choice approved.*"
     ".*Work sequenced.*"
+  ] moexCanonicalText;
+  moexOwnerSelection = builtins.match ".*## Owner selection.*" moexCanonicalText != null;
+  moexGovernanceSection = builtins.match ".*## Governance events.*" moexCanonicalText != null;
+  moexGovernanceRoutes = matchesAll [
+    ".*Coordination moved.*Artifact master.*Content experts.*"
+    ".*Contract written.*Solution expert.*Artifact master.*"
+    ".*Feasibility routed.*Artifact master.*Implementation expert.*"
+    ".*Constraint returned.*Implementation expert.*Artifact master, then solution expert.*"
+    ".*Owner selected.*Artifact master.*The affected experts.*"
+    ".*Option recommended.*Requirement expert or solution expert.*User.*"
+    ".*Choice approved.*User.*Artifact master and phase expert.*"
+    ".*Work sequenced.*Solution expert.*Artifact master.*"
+    ".*Work batched.*Artifact master.*Implementation experts.*"
+    ".*Release routed.*Artifact master.*Artifact release expert.*"
+  ] moexCanonicalText;
+  moexDirectRules = matchesAll [
+    ".*artifact master owns all spawning and coordination of experts.*"
+    ".*never owns phase content.*"
+    ".*solution expert calls no subagent.*"
+    ".*routes the[[:space:]]+unchanged contract to the implementation expert.*"
+    ".*returns feasibility constraints only.*does not author a specification, a decision, or a[[:space:]]+task.*"
+    ".*artifact master selects the owner.*"
+    ".*starts each batch and joins all[[:space:]]+task results in one commit.*"
+    ".*declare `allow` for the artifact master and `deny` for each content expert.*"
+    ".*subagent depth is `1`.*"
+    ".*select the artifact master as the primary agent.*"
+    ".*same instruction body for each built-in role.*"
+    ".*frontmatter and other declaration data can differ.*"
+  ] moexCanonicalText;
+  moexDeclaredPermission = matchesAll [
+    ".*declared permission.*"
+    ".*does not prove the runtime behavior of OpenCode.*"
   ] moexCanonicalText;
   moexHarnesses = matchesAll [
     ".*OpenCode.*"
@@ -1249,6 +1425,16 @@ assert masterSkillOmitted;
 assert masterSkillIsGeneric;
 assert masterSkillFrontmatter;
 assert masterRoleCoordinates;
+assert masterRoleEnvelope;
+assert masterRoleFeasibility;
+assert masterRoleBatching;
+assert masterRoleDeclarations;
+assert solutionRoleCoordination;
+assert solutionExpertNoDirectConsult;
+assert contentExpertsDoNotSpawn;
+assert releaseRoleRoutedReadiness;
+assert expertRoleSkillBoundary;
+assert expertRoleTemplateBoundary;
 assert masterRolePlanMessage;
 assert masterRoleMessages;
 assert renderedMasterRolesMatch;
@@ -1257,6 +1443,14 @@ assert renderedReleaseRolesMatch;
 assert renderedBuiltinRoles;
 assert masterSkillPaths;
 assert masterSkillDoesNotCopyRole;
+assert masterSkillPrimaryAgent;
+assert masterRolePhase4Message;
+assert masterRoleOptionInterview;
+assert masterPermissionAllow;
+assert contentExpertsExplicitDeny;
+assert subagentDepthOne;
+assert taskPermissionsOnlyInGlobalSettings;
+assert renderedBodiesMatch;
 assert moexDelivery;
 assert moexDisabled;
 assert moexMirrorsMatch;
@@ -1267,6 +1461,11 @@ assert moexRoleRows;
 assert moexPhaseRows;
 assert moexReadiness;
 assert moexEvents;
+assert moexOwnerSelection;
+assert moexGovernanceSection;
+assert moexGovernanceRoutes;
+assert moexDirectRules;
+assert moexDeclaredPermission;
 assert moexHarnesses;
 assert moexSelfContained;
 {
@@ -1341,6 +1540,16 @@ assert moexSelfContained;
     masterSkillIsGeneric
     masterSkillFrontmatter
     masterRoleCoordinates
+    masterRoleEnvelope
+    masterRoleFeasibility
+    masterRoleBatching
+    masterRoleDeclarations
+    solutionRoleCoordination
+    solutionExpertNoDirectConsult
+    contentExpertsDoNotSpawn
+    releaseRoleRoutedReadiness
+    expertRoleSkillBoundary
+    expertRoleTemplateBoundary
     masterRolePlanMessage
     masterRoleMessages
     renderedMasterRolesMatch
@@ -1349,6 +1558,14 @@ assert moexSelfContained;
     renderedBuiltinRoles
     masterSkillPaths
     masterSkillDoesNotCopyRole
+    masterSkillPrimaryAgent
+    masterRolePhase4Message
+    masterRoleOptionInterview
+    masterPermissionAllow
+    contentExpertsExplicitDeny
+    subagentDepthOne
+    taskPermissionsOnlyInGlobalSettings
+    renderedBodiesMatch
     moexDelivery
     moexDisabled
     moexMirrorsMatch
@@ -1359,6 +1576,11 @@ assert moexSelfContained;
     moexPhaseRows
     moexReadiness
     moexEvents
+    moexOwnerSelection
+    moexGovernanceSection
+    moexGovernanceRoutes
+    moexDirectRules
+    moexDeclaredPermission
     moexHarnesses
     moexSelfContained
     ;
