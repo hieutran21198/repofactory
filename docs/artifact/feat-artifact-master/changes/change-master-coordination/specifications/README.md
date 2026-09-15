@@ -19,15 +19,15 @@ approved dependencies and each `can-parallel` answer. It starts independent task
 All phase 4 output stays in one commit.
 
 The factory gives all factory-rendered OpenCode roles declared coordination permissions. The
-artifact master has `mode = "all"` and `permission.task = "allow"`. Each content expert has
-`mode = "subagent"` and `permission.task = "deny"`. The global OpenCode settings hold each task
-permission. The subagent depth is 1. The user must select the artifact master as the primary
-OpenCode agent before coordination starts.
+artifact master has `mode = "all"` and `permission.task = "allow"`. Each factory-rendered content
+expert has `mode = "subagent"` and `permission.task = "deny"`. The global OpenCode settings hold
+each task permission. The subagent depth is 1. The user must select the artifact master as the
+primary OpenCode agent before coordination starts.
 
 The factory renders the same instruction body for each role in each selected harness. Harness
 frontmatter can differ. The canonical mixture-of-experts page and its two repository-layout
-mirrors change together. The implementation-expert help text states that an implementation
-expert returns constraints only in phases 2 and 3.
+mirrors change together. Each tracked project-local role body gives the constraints-only rule.
+The ignored `devenv.local.nix` descriptions are local-only and outside the versioned contract.
 
 The Repository blueprint aggregate keeps the Domain model pattern. Its invariants include one
 coordination owner, master-routed feasibility review, declared role permissions, and phase 4

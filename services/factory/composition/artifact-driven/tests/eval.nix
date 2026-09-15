@@ -1317,7 +1317,7 @@ let
     ".*returns feasibility constraints only.*does not author a specification, a decision, or a[[:space:]]+task.*"
     ".*artifact master selects the owner.*"
     ".*starts each batch and joins all[[:space:]]+task results in one commit.*"
-    ".*declare `allow` for the artifact master and `deny` for each content expert.*"
+    ".*declare `allow` for the artifact master and `deny` for each factory-rendered[[:space:]]+content expert.*"
     ".*subagent depth is `1`.*"
     ".*select the artifact master as the primary agent.*"
     ".*same instruction body for each built-in role.*"

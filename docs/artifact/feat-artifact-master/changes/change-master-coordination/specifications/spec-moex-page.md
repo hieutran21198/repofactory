@@ -40,7 +40,7 @@ The page must state these rules directly:
 - The artifact master selects the owner of an uncovered component with solution-expert advice.
 - The artifact master makes and starts phase 4 work batches from the approved task data.
 - For factory-rendered OpenCode roles, the settings declare task permission for each role.
-- The settings declare `allow` for the artifact master and `deny` for each content expert.
+- The settings declare `allow` for the artifact master and `deny` for each factory-rendered content expert.
 - The OpenCode subagent depth is 1.
 - The OpenCode user must select the artifact master as the primary agent.
 

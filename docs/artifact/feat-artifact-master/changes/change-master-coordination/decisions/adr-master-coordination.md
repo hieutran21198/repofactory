@@ -31,25 +31,26 @@ batches. It does not change the content payload that it routes.
 | --- | --- | --- | --- |
 | F6 | The artifact-master skill must tell an OpenCode user to select the artifact master as the primary agent. | `factory-expert` | Add a direct primary-agent selection instruction to the skill text. Keep the role body as the coordination source. |
 | F8 | The canonical mixture-of-experts page and both repository-layout mirrors must change together. | Artifact master | Select one phase 4 owner for all three page files. Put the files in one task. Require byte-equality checks. |
-| F9 | The two project-local implementation-expert bodies and their `devenv.local.nix` descriptions need one owner. | Artifact master | Select one phase 4 owner for all four text changes. Do not change `utils/` files in phase 2. |
+| F9 | The two tracked project-local implementation-expert bodies need one owner. The ignored `devenv.local.nix` descriptions are outside versioned scope. | Artifact master | Select one phase 4 owner for both tracked role-body changes. Do not change or check the local-only descriptions. |
 | F11 | The `solutionExpertNamesSkill` assertion can become false if `expert-role` leaves the solution-expert body. | `factory-expert` | Keep the skill name only as a referral to the artifact master. If the name leaves, update or replace the assertion. |
 | F12 | The feasibility review does not require a new decision option. | Solution expert | Keep the two existing coordination options. Apply the constraints to selected option 1. |
 
 The artifact master's owner selections for F8 and F9 must occur before the applicable phase 4
-tasks start. The selected owner must not split either file group between experts.
+tasks start. The selected owner must not split either tracked file group between experts.
 
-## Domain-artifact proposal
+## Domain-artifact resolution
 
-The current domain artifacts contain two old direct routes. A later authorized domain edit must
-make these changes:
+The context canvas keeps `services/factory` as its component. It uses these master-routed events:
 
-- Change the glossary meaning of implementation expert. State that it returns constraints only
-  and never authors specifications or tasks.
-- In the context canvas, route `Contract written` from the solution expert to the artifact master.
-- In the context canvas, route `Constraint returned` from the implementation expert through the
-  artifact master to the solution expert.
+- `Contract written` enters from the solution expert.
+- `Feasibility routed` goes to the implementation expert.
+- `Constraint returned` enters from the implementation expert and goes to the solution expert.
+- `Work sequenced` enters from the solution expert.
+- `Work batched` goes to the implementation expert.
 
-This phase 2 write does not change `docs/domain/`, as directed for this change.
+The glossary states that an implementation expert returns constraints only in phases 2 and 3. It
+also states that the implementation expert does not author specifications, decisions, or tasks.
+The glossary keeps the `Work batch` term.
 
 ## Consequences
 

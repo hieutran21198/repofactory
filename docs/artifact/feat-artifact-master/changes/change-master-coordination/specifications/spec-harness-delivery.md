@@ -25,12 +25,13 @@ The solution-expert body must state that the solution expert calls no subagent. 
 solution expert to send feasibility-review and owner-selection requests to the artifact master.
 It can name `expert-role` only when it tells the artifact master about that skill. It must not
 tell the solution expert to load the skill or use it to create an expert.
-Each implementation-expert body must state that the expert returns constraints only in phases 2
-and 3. It must not tell the expert to author specifications or tasks.
+Each tracked project-local implementation-expert body must state the no-subagent rule. It must
+also state that the expert returns constraints only in phases 2 and 3. It must not tell the expert
+to author specifications, decisions, or tasks.
 
 OpenCode must render `artifact-master` with `mode = "all"`. The OpenCode user must select it as
-the primary agent before coordination starts. OpenCode must render each content expert with
-`mode = "subagent"`.
+the primary agent before coordination starts. OpenCode must render each factory-rendered content
+expert with `mode = "subagent"`.
 
 The canonical artifact-master body must state the OpenCode `allow`, explicit `deny`, and depth 1
 declarations. It must also state that the user selects the artifact master as the primary agent.
@@ -39,6 +40,9 @@ The factory must declare all OpenCode task permissions in one location:
 `harness.opencode.settings.agent.<role>.permission.task`. It must declare `allow` for
 `artifact-master`. It must declare `deny` for each factory-rendered content expert. An absent task
 permission is not a deny.
+
+This declared-permission contract applies only to factory-rendered roles. It does not include the
+project-local implementation experts.
 
 The global OpenCode setting `subagent_depth` must be 1. The master runs as the selected primary
 agent. Thus, depth 1 permits the master to start one content expert and prevents expert nesting.
@@ -64,8 +68,8 @@ Each factory-rendered role declaration must contain this data:
 | Name | It is a unique role name. |
 | Description | It gives the content or coordination boundary. |
 | Instruction body | It contains the canonical role body and an applicable DDD chapter. |
-| OpenCode mode | It is `all` for `artifact-master` and `subagent` for each content expert. |
-| OpenCode task permission | The global settings declare `allow` for `artifact-master` and `deny` for each content expert. |
+| OpenCode mode | It is `all` for `artifact-master` and `subagent` for each factory-rendered content expert. |
+| OpenCode task permission | The global settings declare `allow` for `artifact-master` and `deny` for each factory-rendered content expert. |
 
 The rendered paths must be:
 
@@ -75,14 +79,16 @@ The rendered paths must be:
 | Claude | `.claude/agents/artifact-master.md` | The skill delegates to it. |
 | Codex | `.codex/agents/artifact-master.toml` | The skill delegates to it. |
 
-The project-local implementation-expert sources are:
+The tracked project-local implementation-expert sources are:
 
-| Role | Instruction body | Description source |
-| --- | --- | --- |
-| `factory-expert` | `utils/agent/role/factory-expert/ROLE.md` | `devenv.local.nix` |
-| `nix-lib-expert` | `utils/agent/role/nix-lib-expert/ROLE.md` | `devenv.local.nix` |
+| Role | Instruction body |
+| --- | --- |
+| `factory-expert` | `utils/agent/role/factory-expert/ROLE.md` |
+| `nix-lib-expert` | `utils/agent/role/nix-lib-expert/ROLE.md` |
 
-The artifact master must select the phase 4 owner for changes to these project-local sources.
+The artifact master must select the phase 4 owner for changes to these tracked role bodies. The
+two project-local descriptions in the ignored `devenv.local.nix` file are local-only. They are
+outside the versioned contract and the versioned checks.
 
 ### Domain rule
 
@@ -108,7 +114,8 @@ records the owner-selection resolution for project-local expert text.
 
 - If a selected harness has no rendered built-in role, fail the blueprint evaluation.
 - If two harnesses receive different instruction bodies for the same built-in role, fail the evaluation.
-- If the rendered OpenCode config does not explicitly deny a content expert, fail the evaluation.
+- If the rendered OpenCode config does not explicitly deny a factory-rendered content expert, fail the evaluation.
 - If the rendered OpenCode config does not allow the artifact master, fail the evaluation.
 - If `subagent_depth` is not 1, fail the evaluation.
-- If a content expert renders as a selectable coordinator, fail the evaluation.
+- If a factory-rendered content expert renders as a selectable coordinator, fail the evaluation.
+- Verify each tracked project-local implementation-expert body by inspection. Do not inspect these bodies in the composition evaluation.

@@ -142,12 +142,12 @@ The factory renders the artifact-master role for these harnesses:
 | Codex | `.codex/agents/artifact-master.toml` | Delegated role. |
 
 For the factory-rendered OpenCode roles, the global settings declare the task permission of each
-role. The settings declare `allow` for the artifact master and `deny` for each content expert. An
-absent task permission is not a deny. The subagent depth is `1`. OpenCode renders the artifact
-master with mode `all` and each content expert with mode `subagent`. The OpenCode user must
-select the artifact master as the primary agent before coordination starts. Depth `1` lets the
-master start one content expert and stops expert nesting. The rendered configuration gives a
-declared permission. It does not prove the runtime behavior of OpenCode.
+role. The settings declare `allow` for the artifact master and `deny` for each factory-rendered
+content expert. An absent task permission is not a deny. The subagent depth is `1`. OpenCode
+renders the artifact master with mode `all` and each content expert with mode `subagent`. The
+OpenCode user must select the artifact master as the primary agent before coordination starts.
+Depth `1` lets the master start one content expert and stops expert nesting. The rendered
+configuration gives a declared permission. It does not prove the runtime behavior of OpenCode.
 
 ## Skill load
 

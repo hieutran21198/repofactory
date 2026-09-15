@@ -45,9 +45,9 @@ The evaluation must inspect the rendered OpenCode config. It must assert these d
 | Global settings `agent.<content-expert>.permission.task` | `deny` |
 | Global setting `subagent_depth` | `1` |
 
-The permission assertions apply to roles that the factory renders. Each deny must be explicit. A
-missing key does not satisfy the assertion. The test names and reports these values as declared
-permissions, not runtime permissions.
+The declared-permission and deny-scope assertions apply only to roles that the factory renders.
+Each deny must be explicit. A missing key does not satisfy the assertion. The test names and
+reports these values as declared permissions, not runtime permissions.
 
 The evaluation must compare the instruction body of each built-in role across OpenCode, Claude,
 and Codex. It must exclude frontmatter and other harness declaration data from this comparison.
@@ -58,15 +58,16 @@ If `expert-role` leaves the solution-expert body, the evaluation must update or 
 `solutionExpertNamesSkill`. The assertion must agree with the role that owns uncovered-component
 coordination.
 
-The evaluation must check these project-local instruction bodies and descriptions:
+The project-local experts are outside this evaluation contract. Their versioned behavior exists
+only in these tracked instruction bodies:
 
 - `utils/agent/role/factory-expert/ROLE.md`
 - `utils/agent/role/nix-lib-expert/ROLE.md`
-- the `factory-expert` description in `devenv.local.nix`
-- the `nix-lib-expert` description in `devenv.local.nix`
 
-Each item must state the constraints-only phase 2 and phase 3 boundary. The artifact master must
-select the phase 4 owner for these files.
+The two project-local descriptions in the ignored `devenv.local.nix` file are local-only. They
+are outside the versioned contract and the versioned checks. The composition evaluation must not
+inspect the tracked project-local bodies or the ignored descriptions. The factory does not render
+these project-local roles.
 
 The evaluation must check the canonical mixture-of-experts page and both layout mirrors. The
 three page files must change together and have equal content. Each copy must explain spawning,
@@ -115,8 +116,8 @@ owners.
 
 ## Errors
 
-- A missing role rule, harness role, declared permission, or skill path fails the evaluation.
-- An absent or non-deny content-expert task permission fails the evaluation.
+- A missing canonical role rule, harness role, declared permission, or skill path fails the evaluation.
+- An absent or non-deny task permission for a factory-rendered content expert fails the evaluation.
 - An absent artifact-master task grant fails the evaluation.
 - A subagent depth other than 1 fails the evaluation.
 - A direct feasibility route from the solution expert fails the evaluation.
