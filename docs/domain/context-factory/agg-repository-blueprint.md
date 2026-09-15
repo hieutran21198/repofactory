@@ -38,6 +38,7 @@ adapter but does not activate a composition.
 - An artifact-driven repository has one canonical artifact-master role body.
 - Each selected harness receives a rendered artifact-master role with the canonical coordination and message contract.
 - The artifact-master skill identifies the rendered role of each supported harness and does not repeat the canonical role body.
+- An artifact-driven repository receives one self-contained mixture-of-experts wiki page for its selected repository architecture.
 - Each provider component with a wire surface owns one machine-readable contract for its wire surface.
 - The contract describes each operation that a consumer team can use.
 - The contract uses the language that the selection rule gives for its wire surface.
