@@ -372,8 +372,10 @@ in
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;
             in
             {
+              # allow solution expert to spawn subagent.
               harness.opencode.settings = {
                 subagent_depth = 2;
+                agent.solution-expert.permission.task = "allow";
               };
               role.builder = builtinRoles;
               skill.general =
