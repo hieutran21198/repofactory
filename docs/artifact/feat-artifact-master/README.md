@@ -1,6 +1,6 @@
 # Feature: Artifact master
 
-**Current version:** 3.0.0
+**Current version:** 4.0.0
 
 ## Summary
 
@@ -9,9 +9,9 @@ each phase and gives the user the information that the user needs to direct the 
 
 ## Current artifacts
 
-- [Requirements](versions/3.0.0/requirements/README.md)
-- [Specifications](versions/3.0.0/specifications/README.md)
-- [Decisions](versions/3.0.0/decisions/)
+- [Requirements](versions/4.0.0/requirements/README.md)
+- [Specifications](versions/4.0.0/specifications/README.md)
+- [Decisions](versions/4.0.0/decisions/)
 
 ## Versions
 
