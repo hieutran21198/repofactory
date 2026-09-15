@@ -14,3 +14,4 @@ This directory contains the architecture documents and the governance documents 
 ## Documentation
 
 - [Artifact-Driven Documentation](documentation/artifact-driven/README.md).
+- [Mixture of Experts](documentation/mixture-of-experts/README.md).

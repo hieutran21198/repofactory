@@ -862,6 +862,83 @@ let
     && builtins.match ".*## Build-Pn handoff.*" masterSkillText == null
     && builtins.match ".*\\*\\*Written files:\\*\\*.*" masterSkillText == null;
 
+  moexPage = "docs/wiki/documentation/mixture-of-experts/README.md";
+  moexCanonical = ../../../../../docs/wiki/documentation/mixture-of-experts/README.md;
+  moexCanonicalText = builtins.readFile moexCanonical;
+  moexMirrors = [
+    ../_assets/multiple/docs/wiki/documentation/mixture-of-experts/README.md
+    ../_assets/single/docs/wiki/documentation/mixture-of-experts/README.md
+  ];
+  moexExpectedSources = {
+    multipleOn = ../_assets/multiple/docs/wiki/documentation/mixture-of-experts/README.md;
+    multipleOff = ../_assets/multiple/docs/wiki/documentation/mixture-of-experts/README.md;
+    singleOn = ../_assets/single/docs/wiki/documentation/mixture-of-experts/README.md;
+    singleOff = ../_assets/single/docs/wiki/documentation/mixture-of-experts/README.md;
+  };
+  moexIndexSources = [
+    ../../../../../docs/wiki/README.md
+    ../_assets/multiple/docs/wiki/README.md
+    ../_assets/multiple/ddd/docs/wiki/README.md
+    ../_assets/single/docs/wiki/README.md
+    ../_assets/single/ddd/docs/wiki/README.md
+  ];
+  moexDelivery = builtins.all (
+    key:
+    configs.${key}.files.${moexPage}.copyMode == "copy"
+    && configs.${key}.files.${moexPage}.source == moexExpectedSources.${key}
+    && builtins.pathExists configs.${key}.files.${moexPage}.source
+  ) keys;
+  moexDisabled =
+    !(builtins.hasAttr moexPage (noArchOn.files or { }))
+    && !(builtins.hasAttr moexPage (documentationOff.files or { }));
+  moexMirrorsMatch = builtins.all (mirror: builtins.readFile mirror == moexCanonicalText) moexMirrors;
+  moexIndexesLink = builtins.all (
+    source:
+    builtins.match ".*- [[]Mixture of Experts[]][(]documentation/mixture-of-experts/README[.]md[)][.].*" (
+      builtins.readFile source
+    ) != null
+  ) moexIndexSources;
+  moexSections = matchesAll [
+    ".*# Mixture of experts.*"
+    ".*## Roles and ownership.*"
+    ".*## Phase routing.*"
+    ".*## Plan-Pn then Build-Pn.*"
+    ".*## Two kinds of plan.*"
+    ".*## Harness rendering.*"
+    ".*## Skill load.*"
+    ".*## Related documentation.*"
+  ] moexCanonicalText;
+  moexTerms = matchesAll [
+    ".*Artifact master \\| The role that coordinates one artifact-driven change and routes each phase\\..*"
+    ".*Content expert \\| A role that owns the content of one or more phases\\..*"
+    ".*Harness \\| A coding agent product that reads the role files and skills of a project\\..*"
+    ".*Role \\| An agent persona with one instruction body and one harness declaration\\..*"
+    ".*Skill \\| A folder of instructions that a harness loads on request\\..*"
+    ".*Canonical role body \\| The shared source of the artifact-master coordination contract\\..*"
+    ".*Rendered role \\| The canonical role body in the file format of one harness\\..*"
+  ] moexCanonicalText;
+  moexRoleRows = matchesAll [
+    ".*\\| Artifact master \\| Coordination only\\. It writes no phase content\\. \\|.*"
+    ".*\\| Requirement expert \\| Requirements in phase 1\\. \\|.*"
+    ".*\\| Solution expert \\| Specifications, decisions, tasks, and versions in phases 2, 3, and 5\\. \\|.*"
+    ".*\\| Implementation expert \\| Code and tests for one component in phase 4\\. \\|.*"
+  ] moexCanonicalText;
+  moexPhaseRows = matchesAll [
+    ".*\\| P1 Requirements \\| Requirement expert \\|.*"
+    ".*\\| P2 Specifications \\| Solution expert \\|.*"
+    ".*\\| P3 Plan \\| Solution expert \\|.*"
+    ".*\\| P4 Implementation \\| Implementation expert for each component \\|.*"
+    ".*\\| P5 Version \\| Solution expert \\|.*"
+  ] moexCanonicalText;
+  moexHarnesses = matchesAll [
+    ".*OpenCode.*"
+    ".*Claude.*"
+    ".*Codex.*"
+  ] moexCanonicalText;
+  moexSelfContained =
+    builtins.match ".*\\{\\{.*" moexCanonicalText == null
+    && builtins.match ".*include::.*" moexCanonicalText == null;
+
   compositionModule = moduleFor { };
   providerModule = import ../../../domain/project-management/provider/default.nix {
     config.factory._utils = optionUtils;
@@ -948,6 +1025,16 @@ assert renderedMasterRolesMatch;
 assert unselectedMasterRoleOmitted;
 assert masterSkillPaths;
 assert masterSkillDoesNotCopyRole;
+assert moexDelivery;
+assert moexDisabled;
+assert moexMirrorsMatch;
+assert moexIndexesLink;
+assert moexSections;
+assert moexTerms;
+assert moexRoleRows;
+assert moexPhaseRows;
+assert moexHarnesses;
+assert moexSelfContained;
 {
   inherit
     sourcesMatch
@@ -1017,5 +1104,15 @@ assert masterSkillDoesNotCopyRole;
     unselectedMasterRoleOmitted
     masterSkillPaths
     masterSkillDoesNotCopyRole
+    moexDelivery
+    moexDisabled
+    moexMirrorsMatch
+    moexIndexesLink
+    moexSections
+    moexTerms
+    moexRoleRows
+    moexPhaseRows
+    moexHarnesses
+    moexSelfContained
     ;
 }

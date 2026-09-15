@@ -404,6 +404,10 @@ in
           "docs/wiki/README.md".source = lib.mkForce (
             if ddd then ./_assets/multiple/ddd/docs/wiki/README.md else ./_assets/multiple/docs/wiki/README.md
           );
+          "docs/wiki/documentation/mixture-of-experts/README.md" = {
+            source = ./_assets/multiple/docs/wiki/documentation/mixture-of-experts/README.md;
+            copyMode = "copy";
+          };
         }
         // lib.optionalAttrs ddd {
           "docs/wiki/design/ddd/artifact-driven.md" = {
@@ -425,6 +429,10 @@ in
           "docs/wiki/README.md".source = lib.mkForce (
             if ddd then ./_assets/single/ddd/docs/wiki/README.md else ./_assets/single/docs/wiki/README.md
           );
+          "docs/wiki/documentation/mixture-of-experts/README.md" = {
+            source = ./_assets/single/docs/wiki/documentation/mixture-of-experts/README.md;
+            copyMode = "copy";
+          };
         }
         // lib.optionalAttrs ddd {
           "docs/wiki/design/ddd/artifact-driven.md" = {
