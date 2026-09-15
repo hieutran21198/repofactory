@@ -1,6 +1,6 @@
 # Feature: Documentation site
 
-**Current version:** 6.1.0
+**Current version:** 7.0.0
 
 ## Summary
 
@@ -12,9 +12,9 @@ project generate and publish static assets without replacing factory-owned files
 
 ## Current artifacts
 
-- [Requirements](versions/6.1.0/requirements/README.md)
-- [Specifications](versions/6.1.0/specifications/README.md)
-- [Decisions](versions/6.1.0/decisions/)
+- [Requirements](versions/7.0.0/requirements/README.md)
+- [Specifications](versions/7.0.0/specifications/README.md)
+- [Decisions](versions/7.0.0/decisions/)
 
 ## Versions
 
@@ -30,6 +30,7 @@ project generate and publish static assets without replacing factory-owned files
 | 5.0.0 | [Add Azure Pipelines provider](changes/change-azure-pipelines-provider/README.md) | Requirements |  |
 | 6.0.0 | [Add Azure Static Web App publication target](changes/change-azure-static-web-app/README.md) | Requirements |  |
 | 6.1.0 | [Point SWA app_location at build output](changes/change-swa-app-location/README.md) | Specifications |  |
+| 7.0.0 | [Add Static Web App deploy tool option](changes/change-swa-deploy-tool-option/README.md) | Requirements |  |
 
 Versions from 3.0.0 have folders in `versions/`. The earlier versions were folded into 3.0.0 when
 the artifacts moved to the changes and versions layout. Read each change for the artifacts of that
