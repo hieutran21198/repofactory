@@ -15,3 +15,7 @@ at the end of each phase.
 
 Coordinate each change with the `artifact-master` role (opencode) or skill (claude, codex).
 Do one phase at a time with Plan-Pn then Build-Pn. Do not plan all five phases in one pass.
+
+Never change or commit directly to `main`. Before you make any change, create and check out a new
+branch (for example `change-<name>`). Do all edits and commits on that branch. Merge to `main`
+only after review.

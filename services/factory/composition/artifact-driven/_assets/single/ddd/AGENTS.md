@@ -21,3 +21,7 @@ Do one phase at a time with Plan-Pn then Build-Pn. Do not plan all five phases i
 Keep the domain model in `docs/domain/`. One bounded context is one directory in `src/`.
 Update the domain artifacts in the phase that owns them: the strategic design in phase 1, the
 tactical design in phase 2.
+
+Never change or commit directly to `main`. Before you make any change, create and check out a new
+branch (for example `change-<name>`). Do all edits and commits on that branch. Merge to `main`
+only after review.
