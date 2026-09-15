@@ -17,6 +17,7 @@ write two rows.
 | Implementation expert | context-factory | A role that owns phase 4 of the artifact-driven documentation model for one component, and that gives the solution expert the specifications and the tasks of that component. | Solution expert |
 | Role | context-factory | An agent persona with one body and one declaration, rendered as one role file for each harness in use. | Skill |
 | Skill | context-factory | A folder of instructions that a harness loads on request, copied to the skill folder of each harness in use. | Role |
+| Mixture of experts | context-factory | The harness roles that artifact-driven uses: the artifact master for coordination plus the requirement, solution, and implementation experts for phase content, with routing between them. | Harness |
 | Documentation site | context-factory | A website that renders the `docs/` tree of a generated repository and that the selected publication target serves. | Wiki |
 | Publication target | context-factory | The hosting service that serves the documentation site, `github-pages` or `azure-static-web-app`. One site uses one target. | CI provider |
 | Azure Static Web App | context-factory | An Azure hosting service that serves static websites. It is one publication target of the documentation site. | GitHub Pages |
