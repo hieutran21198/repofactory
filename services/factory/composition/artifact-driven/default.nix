@@ -372,6 +372,9 @@ in
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;
             in
             {
+              harness.opencode.settings = {
+                subagent_depth = 2;
+              };
               role.builder = builtinRoles;
               skill.general =
                 (lib.foldl' (acc: roleName: acc // loadRoleSkills ./_assets/agent/skill/by-role roleName) { } (

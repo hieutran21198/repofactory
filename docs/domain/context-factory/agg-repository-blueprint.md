@@ -29,7 +29,9 @@ adapter but does not activate a composition.
 - Each Azure Pipelines folder segment is non-empty and is not `.` or `..`.
 - The Azure Pipelines folder does not contain a backslash.
 - An enabled artifact issue composition emits the Azure pipeline at `<folder>/accepted-artifact-issues.yml` when it selects Azure Pipelines.
-- An Azure Pipelines folder change changes only the pipeline path. It does not change the pipeline content.
+- For the project-issues composition, an Azure Pipelines folder change changes only the pipeline path.
+- An enabled documentation site composition emits the Azure pipeline at `<folder>/docs-site.yml` when it selects Azure Pipelines.
+- For the docs-site composition, an Azure Pipelines folder change changes only the pipeline path and its trigger self-path.
 - The Azure Pipelines folder does not change a GitHub Actions path or file.
 - Each selected adapter owns its target and credential settings.
 - The artifact issue composition gives each artifact type one first status.
