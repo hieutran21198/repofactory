@@ -71,6 +71,7 @@ let
       architecture ? "multiple",
       documentation ? "artifact-driven",
       ciProvider ? "github-actions",
+      folder ? "azure-pipelines",
       enable ? false,
       title ? "Documentation",
       url ? "https://example.github.io",
@@ -109,7 +110,10 @@ let
         domain = {
           documentation.use = documentation;
           repo-arch.use = architecture;
-          ci-cd.provider.use = ciProvider;
+          ci-cd.provider = {
+            use = ciProvider;
+            azure-pipelines.folder = folder;
+          };
         };
         composition.artifact-driven.docs-site = {
           inherit
@@ -239,6 +243,16 @@ let
     beforeNodeSetup = extensionBeforeNodeSetup;
     beforeSiteBuild = extensionBeforeSiteBuild;
     afterSiteBuild = extensionAfterSiteBuild;
+  };
+  azureCustomFolder = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    folder = "ci/azure";
+  };
+  githubCustomFolder = evalModule {
+    enable = true;
+    ciProvider = "github-actions";
+    folder = "ci/azure";
   };
   badCiProvider = evalModule {
     enable = true;
@@ -644,6 +658,33 @@ let
     && !(builtins.hasAttr githubWorkflowFile azureExtensions.files)
     && azure.files.${azurePipelineFile} ? text
     && !(azure.files.${azurePipelineFile} ? source);
+  azureCustomFolderFile = "ci/azure/docs-site.yml";
+  azureDefaultFolderEmitted = builtins.hasAttr azurePipelineFile azure.files;
+  azureDefaultTriggerHasDefaultPath =
+    matches "trigger:.*azure-pipelines/docs-site[.]yml.*pr: none"
+      azure.files.${azurePipelineFile}.text;
+  azureCustomFolderEmitted = builtins.hasAttr azureCustomFolderFile azureCustomFolder.files;
+  azureCustomTriggerHasCustomPath =
+    matches "trigger:.*ci/azure/docs-site[.]yml.*pr: none"
+      azureCustomFolder.files.${azureCustomFolderFile}.text;
+  azureCustomFolderOmitsDefaultFile = !(builtins.hasAttr azurePipelineFile azureCustomFolder.files);
+  azureCustomFolderHasNoStaleDefaultTrigger =
+    !matches "azure-pipelines/docs-site[.]yml" azureCustomFolder.files.${azureCustomFolderFile}.text;
+  azureFolderNormalizedBytes =
+    builtins.replaceStrings [ "azure-pipelines/docs-site.yml" ] [ "FOLDER/docs-site.yml" ]
+      azure.files.${azurePipelineFile}.text
+    == builtins.replaceStrings [ "ci/azure/docs-site.yml" ] [ "FOLDER/docs-site.yml" ]
+      azureCustomFolder.files.${azureCustomFolderFile}.text;
+  githubCustomFolderUnchanged =
+    githubCustomFolder.files.${githubWorkflowFile}.text == on.files.${githubWorkflowFile}.text
+    && githubCustomFolder.files."${site}/site.json".text == on.files."${site}/site.json".text
+    && !(builtins.hasAttr azurePipelineFile githubCustomFolder.files)
+    && !(builtins.hasAttr azureCustomFolderFile githubCustomFolder.files);
+  githubEmitsNoAzureFile =
+    !(builtins.hasAttr azurePipelineFile on.files)
+    && !(builtins.hasAttr azurePipelineFile githubCustomFolder.files)
+    && !(builtins.hasAttr azureCustomFolderFile on.files)
+    && !(builtins.hasAttr azureCustomFolderFile githubCustomFolder.files);
   azureTriggerOrder =
     let
       text = azureExtensions.files.${azurePipelineFile}.text;
@@ -1092,6 +1133,15 @@ assert extensionWorkflowMatches;
 assert extensionWatchPathIndentation;
 assert optionalCommandFieldsOmitted;
 assert perProviderEmission;
+assert azureDefaultFolderEmitted;
+assert azureDefaultTriggerHasDefaultPath;
+assert azureCustomFolderEmitted;
+assert azureCustomTriggerHasCustomPath;
+assert azureCustomFolderOmitsDefaultFile;
+assert azureCustomFolderHasNoStaleDefaultTrigger;
+assert azureFolderNormalizedBytes;
+assert githubCustomFolderUnchanged;
+assert githubEmitsNoAzureFile;
 assert azureTriggerOrder;
 assert azureStepOrder;
 assert azureExtensionValues;
@@ -1161,6 +1211,15 @@ assert invalidSetupsRejected;
     extensionWatchPathIndentation
     optionalCommandFieldsOmitted
     perProviderEmission
+    azureDefaultFolderEmitted
+    azureDefaultTriggerHasDefaultPath
+    azureCustomFolderEmitted
+    azureCustomTriggerHasCustomPath
+    azureCustomFolderOmitsDefaultFile
+    azureCustomFolderHasNoStaleDefaultTrigger
+    azureFolderNormalizedBytes
+    githubCustomFolderUnchanged
+    githubEmitsNoAzureFile
     azureTriggerOrder
     azureStepOrder
     azureExtensionValues

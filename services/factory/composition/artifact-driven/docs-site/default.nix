@@ -187,7 +187,7 @@ let
             - name: Build the website
               run: npm run build${afterSiteBuild}${buildStepsTail}${deployJob}'';
   azurePipeline =
-    docsSite:
+    folder: docsSite:
     let
       inherit (docsSite) notification;
       notificationEnabled = notification.uses != [ ];
@@ -278,7 +278,7 @@ let
           include:
           - docs/**
           - apps/documentation/**
-          - azure-pipelines/docs-site.yml${watchPaths}
+          - ${folder}/docs-site.yml${watchPaths}
       pr: none
 
       pool:
@@ -417,6 +417,7 @@ in
         && ((step."with" or { }) == { } || hasUses)
         && (step.working-directory == null || (hasRun && step.working-directory != ""));
       site = "apps/documentation";
+      folder = ci-cd.provider.azure-pipelines.folder;
     in
     lib.mkIf docsSite.enable {
       assertions = [
@@ -568,8 +569,8 @@ in
         };
       }
       // lib.optionalAttrs (ci-cd.provider.use == "azure-pipelines") {
-        "azure-pipelines/docs-site.yml" = {
-          text = azurePipeline docsSite;
+        "${folder}/docs-site.yml" = {
+          text = azurePipeline folder docsSite;
           copyMode = "copy";
         };
       }
