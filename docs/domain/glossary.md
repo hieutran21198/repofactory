@@ -10,6 +10,7 @@ write two rows.
 | Artifact issue | context-factory | A project issue that represents one accepted feature artifact file. | Pull request |
 | Artifact proposal | context-factory | An artifact change in a pull request that has not merged. | Accepted artifact |
 | Artifact master | context-factory | The coordinator that controls one artifact-driven change and routes each phase to its owner. | Phase owner |
+| Artifact release expert | context-factory | A role that owns phase 5 of the artifact-driven documentation model and that copies the version without edits. | Solution expert |
 | Azure Pipelines | context-factory | An Azure DevOps CI provider that runs factory workflows. | GitHub Actions |
 | Azure Pipelines folder | context-factory | The folder in a generated repository that holds Azure Pipelines pipeline files. The default folder is `azure-pipelines`. | Pipeline file |
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |
