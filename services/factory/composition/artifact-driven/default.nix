@@ -471,7 +471,7 @@ in
           };
         }
         // lib.optionalAttrs (ci-cd.provider.use == "azure-pipelines") {
-          "azure-pipelines/accepted-artifact-issues.yml" = {
+          "${ci-cd.provider.azure-pipelines.folder}/accepted-artifact-issues.yml" = {
             text = azurePipeline projectProvider (
               if projectProvider == "github-projects" then githubProjects.token-secret else ""
             );

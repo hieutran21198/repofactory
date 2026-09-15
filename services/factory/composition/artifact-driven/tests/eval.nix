@@ -72,6 +72,7 @@ let
       method ? "ddd",
       documentation ? "artifact-driven",
       ciProvider ? "unset",
+      folder ? "azure-pipelines",
       projectProvider ? "unset",
       enable ? false,
       statuses ? defaultStatuses,
@@ -96,7 +97,10 @@ let
           documentation.use = documentation;
           repo-arch.use = architecture;
           design.use = method;
-          ci-cd.provider.use = ciProvider;
+          ci-cd.provider = {
+            use = ciProvider;
+            azure-pipelines.folder = folder;
+          };
           project-management.provider = {
             use = projectProvider;
             github-projects = {
@@ -131,6 +135,24 @@ let
     };
 
   evalModule = args: (moduleFor args).config;
+
+  # The Azure Pipelines domain owns the folder option and its validation.
+  domainModuleFor =
+    {
+      ciProvider ? "unset",
+      folder ? "azure-pipelines",
+    }:
+    import ../../../domain/ci-cd/provider/azure-pipelines/default.nix {
+      inherit lib;
+      config.factory = {
+        _utils = optionUtils;
+        domain.ci-cd.provider = {
+          use = ciProvider;
+          azure-pipelines.folder = folder;
+        };
+      };
+      namespace = "factory";
+    };
 
   configs = {
     multipleOn = evalModule { };
@@ -227,6 +249,18 @@ let
     projectProvider = "github-projects";
     githubOwner = "";
     githubProjectNumber = 0;
+  };
+  azureCustomFolderOn = evalModule {
+    ciProvider = "azure-pipelines";
+    projectProvider = "github-projects";
+    enable = true;
+    folder = "ci/azure";
+  };
+  githubCustomFolderOn = evalModule {
+    ciProvider = "github-actions";
+    projectProvider = "github-projects";
+    enable = true;
+    folder = "ci/azure";
   };
 
   invalidSetups = [
@@ -600,6 +634,102 @@ let
       builtins.match ".*one to one onto an Azure secret variable.*" (
         builtins.readFile credentialGuide.source
       ) != null;
+
+  azureCustomFolderFile = "ci/azure/accepted-artifact-issues.yml";
+  azureDefaultFolderEmitted =
+    builtins.hasAttr azurePipelineFile azureGithubOn.files
+    && !(builtins.hasAttr azureCustomFolderFile azureGithubOn.files);
+  azureCustomFolderEmitted =
+    builtins.hasAttr azureCustomFolderFile azureCustomFolderOn.files
+    && !(builtins.hasAttr azurePipelineFile azureCustomFolderOn.files);
+  azureFolderContentIdentical =
+    azureGithubOn.files.${azurePipelineFile}.text
+    == azureCustomFolderOn.files.${azureCustomFolderFile}.text;
+  folderDoesNotChangeGithub =
+    githubCustomFolderOn.files.${githubWorkflowFile}.text == githubOn.files.${githubWorkflowFile}.text
+    && !(builtins.hasAttr azureCustomFolderFile githubCustomFolderOn.files)
+    && !(builtins.hasAttr azurePipelineFile githubCustomFolderOn.files);
+
+  folderOption = "factory.domain.ci-cd.provider.azure-pipelines.folder";
+  folderDefault =
+    (domainModuleFor { }).options.factory.domain.ci-cd.provider.azure-pipelines.folder.default
+    == "azure-pipelines";
+  ciSelections = [
+    "unset"
+    "github-actions"
+    "azure-pipelines"
+  ];
+  invalidFolders = [
+    {
+      folder = "";
+      rule = "must not be empty";
+    }
+    {
+      folder = "/absolute";
+      rule = "must not start with";
+    }
+    {
+      folder = "ci//azure";
+      rule = "empty path segment";
+    }
+    {
+      folder = "ci/./azure";
+      rule = "\".\" path segment";
+    }
+    {
+      folder = "ci/../azure";
+      rule = "\"..\" path segment";
+    }
+    {
+      folder = "ci\\\\azure";
+      rule = "backslash";
+    }
+  ];
+  failingMessages =
+    cfg:
+    map (assertion: assertion.message) (
+      builtins.filter (assertion: !assertion.assertion) (cfg.assertions or [ ])
+    );
+  invalidFolderRejected = builtins.all (
+    selection:
+    builtins.all (
+      case:
+      let
+        cfg =
+          (domainModuleFor {
+            ciProvider = selection;
+            inherit (case) folder;
+          }).config;
+        messages = failingMessages cfg;
+      in
+      !(assertionsPass cfg)
+      && builtins.any (message: builtins.match ".*${folderOption}.*" message != null) messages
+      && builtins.any (message: builtins.match ".*${case.rule}.*" message != null) messages
+    ) invalidFolders
+  ) ciSelections;
+  invalidFolderStopsBeforeEmission = builtins.all (
+    selection:
+    builtins.all (
+      case:
+      let
+        composition = evalModule {
+          ciProvider = selection;
+          projectProvider = "github-projects";
+          enable = true;
+          inherit (case) folder;
+        };
+        domain =
+          (domainModuleFor {
+            ciProvider = selection;
+            inherit (case) folder;
+          }).config;
+        merged = composition // {
+          assertions = (composition.assertions or [ ]) ++ (domain.assertions or [ ]);
+        };
+      in
+      !(assertionsPass merged)
+    ) invalidFolders
+  ) ciSelections;
 
   skillPath = ../_assets/agent/skill/by-role/solution-expert/expert-role;
   skillFiles = [
@@ -989,6 +1119,13 @@ assert azureTrelloSecretsMapped;
 assert azurePipelineTrigger;
 assert azureMultiProviderMatches;
 assert azureGuidesMatch;
+assert azureDefaultFolderEmitted;
+assert azureCustomFolderEmitted;
+assert azureFolderContentIdentical;
+assert folderDoesNotChangeGithub;
+assert folderDefault;
+assert invalidFolderRejected;
+assert invalidFolderStopsBeforeEmission;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
 assert skillShipped;
@@ -1068,6 +1205,13 @@ assert moexSelfContained;
     azurePipelineTrigger
     azureMultiProviderMatches
     azureGuidesMatch
+    azureDefaultFolderEmitted
+    azureCustomFolderEmitted
+    azureFolderContentIdentical
+    folderDoesNotChangeGithub
+    folderDefault
+    invalidFolderRejected
+    invalidFolderStopsBeforeEmission
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
     skillShipped

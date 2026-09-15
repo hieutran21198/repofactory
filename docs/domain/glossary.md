@@ -11,6 +11,7 @@ write two rows.
 | Artifact proposal | context-factory | An artifact change in a pull request that has not merged. | Accepted artifact |
 | Artifact master | context-factory | The coordinator that controls one artifact-driven change and routes each phase to its owner. | Phase owner |
 | Azure Pipelines | context-factory | An Azure DevOps CI provider that runs factory workflows. | GitHub Actions |
+| Azure Pipelines folder | context-factory | The folder in a generated repository that holds Azure Pipelines pipeline files. The default folder is `azure-pipelines`. | Pipeline file |
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |
 | Provider | context-factory | An external system that receives artifact issues. | CI provider |
 | Harness | context-factory | A coding agent product that reads the rendered role files and the skills of a project. Examples: claude, codex, opencode. | Coding agent |

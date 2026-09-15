@@ -23,6 +23,14 @@ adapter but does not activate a composition.
 - One repository blueprint selects at most one project-management provider.
 - An enabled artifact issue composition needs the artifact-driven model and one selected CI provider (github-actions or azure-pipelines).
 - An enabled artifact issue composition needs one supported project-management adapter.
+- The Azure Pipelines folder defaults to `azure-pipelines`.
+- The Azure Pipelines folder is a non-empty relative POSIX repository path.
+- The Azure Pipelines folder does not start with `/`.
+- Each Azure Pipelines folder segment is non-empty and is not `.` or `..`.
+- The Azure Pipelines folder does not contain a backslash.
+- An enabled artifact issue composition emits the Azure pipeline at `<folder>/accepted-artifact-issues.yml` when it selects Azure Pipelines.
+- An Azure Pipelines folder change changes only the pipeline path. It does not change the pipeline content.
+- The Azure Pipelines folder does not change a GitHub Actions path or file.
 - Each selected adapter owns its target and credential settings.
 - The artifact issue composition gives each artifact type one first status.
 - An enabled acceptance notification selects one or more supported notification providers and their settings.
