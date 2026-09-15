@@ -21,6 +21,7 @@ write two rows.
 | Documentation site | context-factory | A website that renders the `docs/` tree of a generated repository and that the selected publication target serves. | Wiki |
 | Publication target | context-factory | The hosting service that serves the documentation site, `github-pages` or `azure-static-web-app`. One site uses one target. | CI provider |
 | Azure Static Web App | context-factory | An Azure hosting service that serves static websites. It is one publication target of the documentation site. | GitHub Pages |
+| Deploy tool | context-factory | The mechanism that uploads the documentation site build output to Azure Static Web Apps, `official-task` or `swa-cli`. One site uses one tool. | Publication target |
 | Generated documentation asset | context-factory | A file that a workflow makes and adds to a documentation site static directory. | Authored Markdown page |
 | Deployment notification | context-factory | One team message that reports a successful documentation site deployment. | Acceptance notification |
 | Notification provider | context-factory | An external system that receives a team notification. | Project-management provider |

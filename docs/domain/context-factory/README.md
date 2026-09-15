@@ -29,6 +29,7 @@ provider component owns a machine-readable contract for its wire surface.
 | Documentation site | A website that renders the `docs/` tree of a generated repository and that the selected publication target serves. |
 | Publication target | The hosting service that serves the documentation site, `github-pages` or `azure-static-web-app`. One site uses one target. |
 | Azure Static Web App | An Azure hosting service that serves static websites. It is one publication target of the documentation site. |
+| Deploy tool | The mechanism that uploads the documentation site build output to Azure Static Web Apps, `official-task` or `swa-cli`. |
 | Generated documentation asset | A file that a workflow makes and adds to a documentation site static directory. |
 | Deployment notification | One team message that reports a successful documentation site deployment. |
 | Notification provider | An external system that receives a team notification. |

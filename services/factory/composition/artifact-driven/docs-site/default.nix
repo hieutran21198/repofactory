@@ -48,6 +48,10 @@ let
   };
   yamlScalar = builtins.toJSON;
   yamlKey = key: if builtins.match "[A-Za-z0-9_-]+" key != null then key else yamlScalar key;
+  # The factory owns the SWA CLI version. A project cannot set it.
+  swaCliVersion = "2.0.10";
+  swaCliInstall = "npm install --global @azure/static-web-apps-cli@${swaCliVersion}";
+  swaCliDeploy = "swa deploy ./build --deployment-token \"$SWA_CLI_DEPLOYMENT_TOKEN\" --env production";
   renderMap =
     name: values:
     lib.optionalString (values != { }) (
@@ -98,6 +102,7 @@ let
       inherit (docsSite) notification;
       notificationEnabled = notification.uses != [ ];
       isAzure = docsSite.target == "azure-static-web-app";
+      isSwaCli = docsSite.azure-static-web-app.deploy-tool == "swa-cli";
       notificationPermission = if notificationEnabled then "\n      contents: read" else "";
       watchPaths = lib.concatMapStrings (
         path: "\n      - ${yamlScalar path}"
@@ -115,10 +120,26 @@ let
           "\n      - name: Check out the notification code\n        uses: actions/checkout@v4\n        with:\n          persist-credentials: false\n      - name: Notify the team about the deployment\n        run: python3 .github/docs-site/notify.py\n        env:\n          DOCS_SITE_NOTIFICATION_USES: '${builtins.toJSON notification.uses}'${lib.optionalString (builtins.elem "google-chat" notification.uses) "\n          DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK: \${{ secrets.${notification.google-chat.webhook-secret} }}"}${lib.optionalString (builtins.elem "slack" notification.uses) "\n          DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK: \${{ secrets.${notification.slack.webhook-secret} }}"}${lib.optionalString (builtins.elem "telegram" notification.uses) "\n          DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN: \${{ secrets.${notification.telegram.token-secret} }}\n          DOCS_SITE_NOTIFICATION_TELEGRAM_CHAT_ID: ${builtins.toJSON notification.telegram.chat-id}"}${deploymentUrlLine}\n          DOCS_SITE_REPOSITORY: \${{ github.repository }}\n          DOCS_SITE_REF_NAME: \${{ github.ref_name }}\n          DOCS_SITE_COMMIT_SHA: \${{ github.sha }}\n          DOCS_SITE_RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}\n"
         else
           "\n";
-      azureDeployStep = "\n      - name: Deploy to Azure Static Web Apps\n        uses: Azure/static-web-apps-deploy@v1\n        with:\n          azure_static_web_apps_api_token: \${{ secrets.${docsSite.azure-static-web-app.api-token-secret} }}\n                app_location: apps/documentation/build\n                output_location: build\n                skip_app_build: true";
+      azureOfficialDeployStep = "\n      - name: Deploy to Azure Static Web Apps\n        uses: Azure/static-web-apps-deploy@v1\n        with:\n          azure_static_web_apps_api_token: \${{ secrets.${docsSite.azure-static-web-app.api-token-secret} }}\n                app_location: apps/documentation/build\n                output_location: build\n                skip_app_build: true";
+      azureCliDeploySteps = renderWorkflowSteps [
+        {
+          name = "Install the Static Web Apps CLI";
+          uses = null;
+          run = swaCliInstall;
+          working-directory = null;
+        }
+        {
+          name = "Deploy to Azure Static Web Apps";
+          uses = null;
+          run = swaCliDeploy;
+          working-directory = null;
+          env.SWA_CLI_DEPLOYMENT_TOKEN = "\${{ secrets.${docsSite.azure-static-web-app.api-token-secret} }}";
+        }
+      ];
+      azureDeploySteps = if isSwaCli then azureCliDeploySteps else azureOfficialDeployStep;
       buildStepsTail =
         if isAzure then
-          "${azureDeployStep}${notificationSteps}"
+          "${azureDeploySteps}${notificationSteps}"
         else
           "\n      - name: Upload the website\n        uses: actions/upload-pages-artifact@v3\n        with:\n          path: apps/documentation/build\n";
       deployJob =
@@ -171,9 +192,27 @@ let
       inherit (docsSite) notification;
       notificationEnabled = notification.uses != [ ];
       isAzure = docsSite.target == "azure-static-web-app";
+      isSwaCli = docsSite.azure-static-web-app.deploy-tool == "swa-cli";
+      swaCliCache = isAzure && isSwaCli;
       watchPaths = lib.concatMapStrings (
         path: "\n    - ${yamlScalar path}"
       ) docsSite.workflow.watch-paths;
+      cacheVariable =
+        if swaCliCache then "variables:\n  npm_config_cache: $(Pipeline.Workspace)/.npm\n\n" else "";
+      cacheStep =
+        if swaCliCache then
+          ''
+            - task: Cache@2
+              displayName: Cache npm
+              inputs:
+                key: '"npm" | "$(Agent.OS)" | "swa-cli-${swaCliVersion}" | apps/documentation/package-lock.json'
+                restoreKeys: |
+                  "npm" | "$(Agent.OS)" | "swa-cli-${swaCliVersion}"
+                  "npm" | "$(Agent.OS)"
+                path: $(npm_config_cache)
+          ''
+        else
+          "";
       beforeNodeSetup = renderAzureSteps docsSite.workflow.build.before-node-setup;
       beforeSiteBuild = renderAzureSteps docsSite.workflow.build.before-site-build;
       afterSiteBuild = renderAzureSteps docsSite.workflow.build.after-site-build;
@@ -194,15 +233,30 @@ let
           "";
       publishStep =
         if isAzure then
-          ''
-            - task: AzureStaticWebApp@0
-              displayName: Deploy to Azure Static Web Apps
-              inputs:
-                app_location: apps/documentation/build
-                output_location: build
-                skip_app_build: true
-                azure_static_web_apps_api_token: $(${docsSite.azure-static-web-app.api-token-secret})
-          ''
+          if isSwaCli then
+            renderAzureSteps [
+              {
+                name = "Install the Static Web Apps CLI";
+                run = swaCliInstall;
+                working-directory = "apps/documentation";
+              }
+              {
+                name = "Deploy to Azure Static Web Apps";
+                run = swaCliDeploy;
+                working-directory = "apps/documentation";
+                env.SWA_CLI_DEPLOYMENT_TOKEN = "$(${docsSite.azure-static-web-app.api-token-secret})";
+              }
+            ]
+          else
+            ''
+              - task: AzureStaticWebApp@0
+                displayName: Deploy to Azure Static Web Apps
+                inputs:
+                  app_location: apps/documentation/build
+                  output_location: build
+                  skip_app_build: true
+                  azure_static_web_apps_api_token: $(${docsSite.azure-static-web-app.api-token-secret})
+            ''
         else
           ''
             - script: |
@@ -230,14 +284,14 @@ let
       pool:
         vmImage: 'ubuntu-latest'
 
-      steps:
+      ${cacheVariable}steps:
       - checkout: self
         persistCredentials: false${beforeNodeSetup}
       - task: NodeTool@0
         displayName: Set up Node.js
         inputs:
           versionSpec: '22.x'
-      - script: npm ci
+      ${cacheStep}- script: npm ci
         displayName: Install the dependencies
         workingDirectory: apps/documentation${beforeSiteBuild}
       - script: npm run build
@@ -275,6 +329,14 @@ in
     azure-static-web-app.api-token-secret = _utils.mkStrOpt {
       default = "DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN";
       description = "The secret that holds the Static Web App deployment token.";
+    };
+    azure-static-web-app.deploy-tool = _utils.mkEnumOpt {
+      values = [
+        "official-task"
+        "swa-cli"
+      ];
+      default = "official-task";
+      description = "The mechanism that uploads a Static Web App.";
     };
     static-directories = _utils.mkListOpt {
       ofType = lib.types.str;
@@ -407,6 +469,15 @@ in
             docsSite.target != "azure-static-web-app"
             || builtins.match "[A-Za-z_][A-Za-z0-9_]*" docsSite.azure-static-web-app.api-token-secret != null;
           message = "${namespace}.composition.artifact-driven.docs-site.azure-static-web-app.api-token-secret must be a secret name";
+        }
+      ]
+      ++ [
+        {
+          assertion = builtins.elem docsSite.azure-static-web-app.deploy-tool [
+            "official-task"
+            "swa-cli"
+          ];
+          message = "${namespace}.composition.artifact-driven.docs-site.azure-static-web-app.deploy-tool must be \"official-task\" or \"swa-cli\"";
         }
       ]
       ++ lib.optional notificationEnabled {

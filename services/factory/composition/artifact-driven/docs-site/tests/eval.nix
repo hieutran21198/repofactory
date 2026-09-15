@@ -77,6 +77,7 @@ let
       baseUrl ? "/repo/",
       target ? "github-pages",
       apiTokenSecret ? "DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN",
+      deployTool ? "official-task",
       notificationUses ? [ ],
       notificationGoogleChatSecret ? "DOCS_SITE_NOTIFICATION_GOOGLE_CHAT_WEBHOOK",
       notificationSlackSecret ? "DOCS_SITE_NOTIFICATION_SLACK_WEBHOOK",
@@ -118,7 +119,10 @@ let
             target
             ;
           base-url = baseUrl;
-          azure-static-web-app.api-token-secret = apiTokenSecret;
+          azure-static-web-app = {
+            api-token-secret = apiTokenSecret;
+            deploy-tool = deployTool;
+          };
           static-directories = staticDirectories;
           workflow = {
             watch-paths = workflowWatchPaths;
@@ -314,6 +318,71 @@ let
     beforeNodeSetup = extensionBeforeNodeSetup;
     beforeSiteBuild = extensionBeforeSiteBuild;
     afterSiteBuild = extensionAfterSiteBuild;
+  };
+  githubAzureOfficial = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    deployTool = "official-task";
+  };
+  azureSwaOfficial = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    deployTool = "official-task";
+  };
+  githubSwaCli = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    deployTool = "swa-cli";
+  };
+  azureSwaCli = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    deployTool = "swa-cli";
+  };
+  githubSwaCliFull = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    deployTool = "swa-cli";
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
+  };
+  azureSwaCliFull = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "azure-static-web-app";
+    deployTool = "swa-cli";
+    beforeSiteBuild = extensionBeforeSiteBuild;
+    afterSiteBuild = extensionAfterSiteBuild;
+    notificationUses = [
+      "google-chat"
+      "slack"
+      "telegram"
+    ];
+    notificationTelegramChatId = "-100123";
+  };
+  githubPagesSwaCli = evalModule {
+    enable = true;
+    target = "github-pages";
+    deployTool = "swa-cli";
+  };
+  azurePagesSwaCli = evalModule {
+    enable = true;
+    ciProvider = "azure-pipelines";
+    target = "github-pages";
+    deployTool = "swa-cli";
+  };
+  invalidDeployTool = evalModule {
+    enable = true;
+    target = "azure-static-web-app";
+    deployTool = "not-a-tool";
   };
   invalidTarget = evalModule {
     enable = true;
@@ -776,6 +845,142 @@ let
       && builtins.match ".*azure-static-web-app.*" message != null
     ) (failedMessages invalidTarget);
   invalidTokenSecretRejected = !assertionsPass invalidTokenSecret;
+  deployToolOptionsMatch =
+    let
+      options = (moduleFor { }).options.factory.composition.artifact-driven.docs-site;
+    in
+    options.azure-static-web-app.deploy-tool.testType == "enum"
+    &&
+      options.azure-static-web-app.deploy-tool.values == [
+        "official-task"
+        "swa-cli"
+      ]
+    && options.azure-static-web-app.deploy-tool.default == "official-task"
+    &&
+      builtins.attrNames options.azure-static-web-app == [
+        "api-token-secret"
+        "deploy-tool"
+      ];
+  githubDeployShapeMatches =
+    let
+      officialText = githubAzureOfficial.files.".github/workflows/docs-site.yml".text;
+      cliText = githubSwaCli.files.".github/workflows/docs-site.yml".text;
+    in
+    matches "Azure/static-web-apps-deploy@v1" officialText
+    && !matches "static-web-apps-cli" officialText
+    && !matches "swa deploy" officialText
+    && matches "@azure/static-web-apps-cli@2[.]0[.]10" cliText
+    && matches "swa deploy [.]/build" cliText
+    && !matches "Azure/static-web-apps-deploy@v1" cliText
+    && !matches "AzureStaticWebApp" cliText;
+  azureDeployShapeMatches =
+    let
+      officialText = azureSwaOfficial.files.${azurePipelineFile}.text;
+      cliText = azureSwaCli.files.${azurePipelineFile}.text;
+    in
+    matches "AzureStaticWebApp@0" officialText
+    && !matches "@azure/static-web-apps-cli" officialText
+    && !matches "swa deploy" officialText
+    && matches "@azure/static-web-apps-cli@2[.]0[.]10" cliText
+    && matches "swa deploy [.]/build" cliText
+    && !matches "AzureStaticWebApp@0" cliText
+    && !matches "Azure/static-web-apps-deploy" cliText;
+  defaultDeployShapeMatches =
+    let
+      githubText = githubAzure.files.".github/workflows/docs-site.yml".text;
+      azureText = azureSwa.files.${azurePipelineFile}.text;
+    in
+    matches "Azure/static-web-apps-deploy@v1" githubText
+    && matches "AzureStaticWebApp@0" azureText
+    && !matches "static-web-apps-cli" githubText
+    && !matches "static-web-apps-cli" azureText;
+  swaCliPinMatches =
+    let
+      githubText = githubSwaCli.files.".github/workflows/docs-site.yml".text;
+      azureText = azureSwaCli.files.${azurePipelineFile}.text;
+      install = "npm install --global @azure/static-web-apps-cli@2[.]0[.]10";
+      deploy = "swa deploy [.]/build --deployment-token.*SWA_CLI_DEPLOYMENT_TOKEN.*--env production";
+    in
+    matches install githubText
+    && matches install azureText
+    && matches deploy githubText
+    && matches deploy azureText;
+  deployToolTokenParity =
+    let
+      githubText = githubSwaCli.files.".github/workflows/docs-site.yml".text;
+      azureText = azureSwaCli.files.${azurePipelineFile}.text;
+    in
+    matches "SWA_CLI_DEPLOYMENT_TOKEN: .*secrets[.]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN" githubText
+    && matches "SWA_CLI_DEPLOYMENT_TOKEN: .*[$][(]DOCS_SITE_AZURE_STATIC_WEB_APP_TOKEN[)]" azureText;
+  githubNpmCacheMatches =
+    let
+      text = githubSwaCli.files.".github/workflows/docs-site.yml".text;
+    in
+    matches "cache: npm" text
+    && matches "cache-dependency-path: apps/documentation/package-lock.json" text;
+  azureNpmCacheMatches =
+    let
+      text = azureSwaCli.files.${azurePipelineFile}.text;
+    in
+    builtins.all (pattern: matches pattern text) [
+      "variables:.*npm_config_cache: [$][(]Pipeline[.]Workspace[)]/[.]npm"
+      "Cache@2.*displayName: Cache npm.*key:.*\"npm\" [|] \"[$][(]Agent[.]OS[)]\" [|] \"swa-cli-2[.]0[.]10\" [|] apps/documentation/package-lock[.]json"
+      "restoreKeys: [|].*\"npm\" [|] \"[$][(]Agent[.]OS[)]\" [|] \"swa-cli-2[.]0[.]10\".*\"npm\" [|] \"[$][(]Agent[.]OS[)]\""
+      "path: [$][(]npm_config_cache[)]"
+      "NodeTool@0.*Cache@2.*npm ci"
+    ];
+  githubSwaCliOrderMatches =
+    let
+      text = githubSwaCliFull.files.".github/workflows/docs-site.yml".text;
+    in
+    matches "npm run build.*Check the first output.*Check the second output.*Install the Static Web Apps CLI.*Deploy to Azure Static Web Apps.*Check out the notification code.*Notify the team about the deployment" text;
+  azureSwaCliOrderMatches =
+    let
+      text = azureSwaCliFull.files.${azurePipelineFile}.text;
+    in
+    matches "npm run build.*Check the first output.*Check the second output.*Install the Static Web Apps CLI.*Deploy to Azure Static Web Apps.*Notify the team about the deployment" text;
+  notificationParityMatches =
+    let
+      githubOfficial =
+        builtins.match ".*(Check out the notification code.*)"
+          githubAzureMulti.files.".github/workflows/docs-site.yml".text;
+      githubCli =
+        builtins.match ".*(Check out the notification code.*)"
+          githubSwaCliFull.files.".github/workflows/docs-site.yml".text;
+      azureOfficial =
+        builtins.match ".*(Notify the team about the deployment.*)"
+          azureSwaMulti.files.${azurePipelineFile}.text;
+      azureCli =
+        builtins.match ".*(Notify the team about the deployment.*)"
+          azureSwaCliFull.files.${azurePipelineFile}.text;
+    in
+    githubOfficial == githubCli && azureOfficial == azureCli;
+  pagesExcludeSwaCli =
+    let
+      noSwa =
+        text:
+        !matches "static-web-apps-deploy" text
+        && !matches "static-web-apps-cli" text
+        && !matches "AzureStaticWebApp" text
+        && !matches "swa deploy" text
+        && !matches "SWA_CLI_DEPLOYMENT_TOKEN" text
+        && !matches "npm_config_cache" text;
+      githubText = githubPagesSwaCli.files.".github/workflows/docs-site.yml".text;
+      azureText = azurePagesSwaCli.files.${azurePipelineFile}.text;
+    in
+    noSwa githubText
+    && noSwa azureText
+    && matches "actions/upload-pages-artifact@v3" githubText
+    && matches "gh-pages" azureText;
+  deployToolAssertionsPass =
+    assertionsPass githubAzureOfficial
+    && assertionsPass azureSwaOfficial
+    && assertionsPass githubSwaCli
+    && assertionsPass azureSwaCli;
+  invalidDeployToolRejected = !assertionsPass invalidDeployTool;
+  invalidDeployToolMessage = builtins.elem "factory.composition.artifact-driven.docs-site.azure-static-web-app.deploy-tool must be \"official-task\" or \"swa-cli\"" (
+    failedMessages invalidDeployTool
+  );
   notificationFile = ".github/docs-site/notify.py";
   notificationOptionsMatch =
     let
@@ -848,6 +1053,16 @@ let
       "Copy the deployment token"
       "Mark the Azure variable as secret"
       "cannot create the resource and cannot read the token"
+      "azure-static-web-app[.]deploy-tool"
+      "official-task"
+      "swa-cli"
+      "@azure/static-web-apps-cli@2[.]0[.]10"
+      "swa deploy [.]/build"
+      "--env production"
+      "npm_config_cache"
+      "Cache@2"
+      "swa-cli-2[.]0[.]10"
+      "cannot set or change the CLI version"
     ];
   onAssertionsPass = assertionsPass on;
   notificationAssertionsPass = assertionsPass googleChat && assertionsPass slack;
@@ -903,6 +1118,21 @@ assert azureSwaNotificationsMatch;
 assert targetAssertionsPass;
 assert invalidTargetRejected;
 assert invalidTokenSecretRejected;
+assert deployToolOptionsMatch;
+assert githubDeployShapeMatches;
+assert azureDeployShapeMatches;
+assert defaultDeployShapeMatches;
+assert swaCliPinMatches;
+assert deployToolTokenParity;
+assert githubNpmCacheMatches;
+assert azureNpmCacheMatches;
+assert githubSwaCliOrderMatches;
+assert azureSwaCliOrderMatches;
+assert notificationParityMatches;
+assert pagesExcludeSwaCli;
+assert deployToolAssertionsPass;
+assert invalidDeployToolRejected;
+assert invalidDeployToolMessage;
 assert notificationOptionsMatch;
 assert notificationFilesMatch;
 assert notificationWorkflowsMatch;
@@ -957,6 +1187,21 @@ assert invalidSetupsRejected;
     targetAssertionsPass
     invalidTargetRejected
     invalidTokenSecretRejected
+    deployToolOptionsMatch
+    githubDeployShapeMatches
+    azureDeployShapeMatches
+    defaultDeployShapeMatches
+    swaCliPinMatches
+    deployToolTokenParity
+    githubNpmCacheMatches
+    azureNpmCacheMatches
+    githubSwaCliOrderMatches
+    azureSwaCliOrderMatches
+    notificationParityMatches
+    pagesExcludeSwaCli
+    deployToolAssertionsPass
+    invalidDeployToolRejected
+    invalidDeployToolMessage
     notificationOptionsMatch
     notificationFilesMatch
     notificationWorkflowsMatch

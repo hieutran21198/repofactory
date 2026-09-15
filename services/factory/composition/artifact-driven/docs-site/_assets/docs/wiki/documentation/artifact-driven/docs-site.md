@@ -3,7 +3,8 @@
 The documentation site is a website that renders the `docs/` tree of the repository. The factory
 renders the site project at `apps/documentation/`. The project sets the options
 `factory.composition.artifact-driven.docs-site` in `devenv.local.nix`: `enable`, `title`, `url`,
-`base-url`, `target`, `azure-static-web-app.api-token-secret`, and `notification`. The shell renders the site project from these options.
+`base-url`, `target`, `azure-static-web-app.api-token-secret`,
+`azure-static-web-app.deploy-tool`, and `notification`. The shell renders the site project from these options.
 
 ## Run locally
 
@@ -64,6 +65,32 @@ Make these four manual steps outside the factory:
 The factory cannot create the resource and cannot read the token. The generated pipeline
 builds the site with `npm run build` and uploads `apps/documentation/build` with
 `skip_app_build: true`. It never builds the site a second time.
+
+### Select the deploy tool
+
+The option `azure-static-web-app.deploy-tool` selects the mechanism that uploads the Static
+Web App. It accepts `official-task` or `swa-cli`. The default is `official-task`.
+
+```nix
+factory.composition.artifact-driven.docs-site.azure-static-web-app.deploy-tool = "swa-cli";
+```
+
+- `official-task` uses the official action or task. This value gives the version 6.1.0 behavior.
+- `swa-cli` installs the factory-owned Static Web Apps CLI. It then deploys with the CLI.
+
+The factory pins the CLI version `2.0.10`. The installation command is
+`npm install --global @azure/static-web-apps-cli@2.0.10`. The deploy command is
+`swa deploy ./build --deployment-token "$SWA_CLI_DEPLOYMENT_TOKEN" --env production`. The
+command runs from `apps/documentation` and uploads `apps/documentation/build`. The command
+does not run `swa build`. A project cannot set or change the CLI version.
+
+The GitHub workflow keeps the npm cache of `actions/setup-node@v4`. The Azure pipeline sets
+`npm_config_cache` to `$(Pipeline.Workspace)/.npm`. It also adds a `Cache@2` task. The cache
+key is `"npm" | "$(Agent.OS)" | "swa-cli-2.0.10" | apps/documentation/package-lock.json`. The
+key contains the CLI version. A factory update with a new pin uses a new cache.
+
+Both values deploy the same build output to the same Static Web App. The deployment
+notifications do not change.
 
 ## Set up Azure Pipelines
 
