@@ -18,3 +18,5 @@ change defines the docs-site pipeline path.
 ## Artifacts
 
 - [Requirements](requirements/README.md)
+- [Specifications](specifications/README.md)
+- [Decisions](decisions/)
