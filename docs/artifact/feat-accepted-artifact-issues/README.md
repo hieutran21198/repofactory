@@ -1,6 +1,6 @@
 # Feature: Accepted artifact issues
 
-**Current version:** 9.0.0
+**Current version:** 10.0.0
 
 ## Summary
 
@@ -10,9 +10,9 @@ Google Chat, Slack, or Telegram notifications summarize the accepted changes.
 
 ## Current artifacts
 
-- [Requirements](versions/9.0.0/requirements/README.md)
-- [Specifications](versions/9.0.0/specifications/README.md)
-- [Decisions](versions/9.0.0/decisions/)
+- [Requirements](versions/10.0.0/requirements/README.md)
+- [Specifications](versions/10.0.0/specifications/README.md)
+- [Decisions](versions/10.0.0/decisions/)
 
 ## Versions
 
@@ -33,9 +33,10 @@ Google Chat, Slack, or Telegram notifications summarize the accepted changes.
 | 8.0.0 | [Resolve Trello board IDs before label creation](changes/change-trello-board-id/README.md) | Requirements | 5b5d713..7236e9e |
 | 8.1.0 | [Artifact versions](changes/change-artifact-versions/README.md) | Specifications | 9ccc3ff |
 | 9.0.0 | [Add Azure Pipelines provider](changes/change-azure-pipelines-provider/README.md) | Requirements |  |
+| 10.0.0 | [Azure Pipelines folder](changes/change-azure-pipelines-folder/README.md) | Requirements |  |
 
 Versions 1.0.0 to 7.0.0 have no folder in `versions/`. They were folded into 8.0.0 when the
-artifacts moved to the changes and versions layout. Versions 8.0.0 to 9.0.0 have a folder. Read
+artifacts moved to the changes and versions layout. Versions 8.0.0 to 10.0.0 have a folder. Read
 the change of each version for the artifacts of that step.
 
 ## Artifacts
