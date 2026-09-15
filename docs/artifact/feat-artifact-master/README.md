@@ -17,6 +17,7 @@ each phase and gives the user the information that the user needs to direct the 
 
 | Version | Change | Type | Commits |
 | --- | --- | --- | --- |
+| 4.0.0 | [Master coordination](changes/change-master-coordination/README.md) | Requirements | |
 | 3.0.0 | [Governance](changes/change-governance/README.md) | Requirements | |
 | 2.0.0 | [Mixture of experts wiki](changes/change-mixture-of-experts-wiki/README.md) | Requirements | |
 | 1.0.0 | [Initial](changes/change-initial/README.md) | Requirements | e8528a8..7cb7db6 |

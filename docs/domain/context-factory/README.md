@@ -63,6 +63,8 @@ provider component owns a machine-readable contract for its wire surface.
 - A version is produced by copy only. A file under `versions/` is never edited.
 - A file under `versions/` does not make an artifact issue.
 - The artifact master controls one phase at a time and waits for user approval before each planned build.
+- The artifact master owns all spawning and coordination of experts. The solution expert calls no subagent.
+- When no implementation expert covers a component, the artifact master selects its owner with advice from the solution expert.
 - Each provider component owns one machine-readable contract for its wire surface.
 - A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
 - A consumer team finds the current contract of each provider that it uses.

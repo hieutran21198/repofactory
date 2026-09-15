@@ -36,3 +36,4 @@ write two rows.
 | Provider contract | context-factory | A machine-readable description of the wire surface of one polyrepo component, owned by the provider team. | Wire format |
 | Consumer team | context-factory | A team that uses the wire surface of a provider component. | Provider team |
 | Breaking change | context-factory | A contract change that forces a consumer team to change its code. | Compatible change |
+| Work batch | context-factory | One ordered group of phase 4 tasks that the artifact master makes from the recorded dependencies. | Task |
