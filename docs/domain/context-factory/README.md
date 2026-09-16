@@ -23,7 +23,7 @@ provider component owns a machine-readable contract for its wire surface.
 | Repository blueprint | The selected options and generated files for one repository. |
 | Provider | An external system that receives artifact issues. |
 | Harness | A coding agent product that reads the rendered role files and the skills of a project. |
-| Implementation expert | A role that owns phase 4 of the artifact-driven documentation model for one component. |
+| Implementation expert | A role that owns phase 4 for one component. In phases 2 and 3, it returns feasibility constraints only. |
 | Role | An agent persona with one body and one declaration, rendered as one role file for each harness in use. |
 | Skill | A folder of instructions that a harness loads on request, copied to each harness in use. |
 | Mixture of experts | The harness roles that artifact-driven uses: the artifact master for coordination plus the requirement, solution, and implementation experts for phase content, with routing between them. |
@@ -63,6 +63,8 @@ provider component owns a machine-readable contract for its wire surface.
 - A version is produced by copy only. A file under `versions/` is never edited.
 - A file under `versions/` does not make an artifact issue.
 - The artifact master controls one phase at a time and waits for user approval before each planned build.
+- The artifact master owns all spawning and coordination of experts. The solution expert calls no subagent.
+- When no implementation expert covers a component, the artifact master selects its owner with advice from the solution expert.
 - Each provider component owns one machine-readable contract for its wire surface.
 - A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
 - A consumer team finds the current contract of each provider that it uses.
@@ -76,7 +78,9 @@ provider component owns a machine-readable contract for its wire surface.
 | Publish provider contract | command | Provider team |
 | Run contract gates | command | Provider team |
 | Compare provider contract | command | Consumer team |
+| Contract written | event | Solution expert |
 | Constraint returned | event | Implementation expert |
+| Work sequenced | event | Solution expert |
 | Choice approved | event | User |
 
 ## Outbound messages
@@ -91,9 +95,10 @@ provider component owns a machine-readable contract for its wire surface.
 | Breaking change detected | event | Consumer team |
 | Contract gate failed | event | Provider team |
 | Release routed | event | Artifact release expert |
-| Contract written | event | Implementation expert |
+| Feasibility routed | event | Implementation expert |
+| Constraint returned | event | Solution expert |
 | Option recommended | event | User |
-| Work sequenced | event | Implementation expert |
+| Work batched | event | Implementation expert |
 
 ## Aggregates
 

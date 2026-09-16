@@ -355,27 +355,41 @@ in
 
               # The coordinator is directly selectable in opencode, but stays a delegated
               # subagent in claude and codex, which have no custom primary mode.
+              # A complete nested literal preserves each nested harness declaration.
               mkCoordinatorRole =
                 name: description:
-                (mkRole name description)
+                let
+                  role = mkRole name description;
+                in
+                role
                 // {
-                  harness.opencode.mode = "all";
+                  harness = role.harness // {
+                    opencode = role.harness.opencode // {
+                      mode = "all";
+                    };
+                  };
                 };
 
               builtinRoles = {
-                requirement-expert = mkRole "requirement-expert" "Gathers the business need and writes the change summary and the requirements of a feature. Owns phase 1 of the artifact-driven documentation model. Use when a new feature starts, or when a change to a feature starts.";
-                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2 and 3 of the artifact-driven documentation model, and the phase 5 readiness gate. Works with the implementation expert of each component that the solution touches.";
-                artifact-release-expert = mkRole "artifact-release-expert" "Copies one feature version in phase 5. Owns the copy, the replacement, the deletion, and the feature README update. Does not edit a copied artifact and does not run a design step. Use when phase 5 starts, after the solution expert confirms readiness.";
-                artifact-master = mkCoordinatorRole "artifact-master" "Coordinates one artifact-driven change phase by phase with Plan-Pn then Build-Pn. Owns coordination only and delegates content to the owning expert. Use for coordinating a change, planning then building a phase, or running the next artifact phase.";
+                requirement-expert = mkRole "requirement-expert" "Gathers the business need and writes the change summary and the requirements of a feature. Owns phase 1 content of the artifact-driven documentation model. Calls no subagent and directly tasks no expert. Use when a new feature starts, or when a change to a feature starts.";
+                solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2 and 3 content of the artifact-driven documentation model, and the phase 5 readiness gate. Calls no subagent and directly tasks no expert; it sends each feasibility-review and owner-selection request to the artifact master. Use when phase 2 or phase 3 of a change starts.";
+                artifact-release-expert = mkRole "artifact-release-expert" "Copies one feature version in phase 5. Owns the copy, the replacement, the deletion, and the feature README update. Does not edit a copied artifact and does not run a design step. Returns a missing-readiness query to the artifact master. Use when phase 5 starts, after the solution expert confirms readiness.";
+                artifact-master = mkCoordinatorRole "artifact-master" "Coordinates one artifact-driven change phase by phase with Plan-Pn then Build-Pn. Owns all expert spawning and coordination only, owns no phase content, and delegates each phase to its content owner. Use for coordinating a change, planning then building a phase, or running the next artifact phase.";
               };
 
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;
             in
             {
-              # allow solution expert to spawn subagent.
+              # The artifact master is the only OpenCode role with task permission.
+              # Each built-in content expert has an explicit deny. An absent key is not a deny.
               harness.opencode.settings = {
-                subagent_depth = 2;
-                agent.solution-expert.permission.task = "allow";
+                subagent_depth = 1;
+                agent = {
+                  artifact-master.permission.task = "allow";
+                  requirement-expert.permission.task = "deny";
+                  solution-expert.permission.task = "deny";
+                  artifact-release-expert.permission.task = "deny";
+                };
               };
               role.builder = builtinRoles;
               skill.general =

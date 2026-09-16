@@ -16,7 +16,7 @@ write two rows.
 | Repository blueprint | context-factory | The selected options and generated files for one repository. | Generated repository |
 | Provider | context-factory | An external system that receives artifact issues. | CI provider |
 | Harness | context-factory | A coding agent product that reads the rendered role files and the skills of a project. Examples: claude, codex, opencode. | Coding agent |
-| Implementation expert | context-factory | A role that owns phase 4 of the artifact-driven documentation model for one component, and that gives the solution expert the specifications and the tasks of that component. | Solution expert |
+| Implementation expert | context-factory | A role that owns phase 4 for one component. In phases 2 and 3, it returns feasibility constraints only through the artifact master. It does not author specifications, decisions, or tasks. | Solution expert |
 | Role | context-factory | An agent persona with one body and one declaration, rendered as one role file for each harness in use. | Skill |
 | Skill | context-factory | A folder of instructions that a harness loads on request, copied to the skill folder of each harness in use. | Role |
 | Mixture of experts | context-factory | The harness roles that artifact-driven uses: the artifact master for coordination plus the requirement, solution, and implementation experts for phase content, with routing between them. | Harness |
@@ -36,3 +36,4 @@ write two rows.
 | Provider contract | context-factory | A machine-readable description of the wire surface of one polyrepo component, owned by the provider team. | Wire format |
 | Consumer team | context-factory | A team that uses the wire surface of a provider component. | Provider team |
 | Breaking change | context-factory | A contract change that forces a consumer team to change its code. | Compatible change |
+| Work batch | context-factory | One ordered group of phase 4 tasks that the artifact master makes from the recorded dependencies. | Task |
