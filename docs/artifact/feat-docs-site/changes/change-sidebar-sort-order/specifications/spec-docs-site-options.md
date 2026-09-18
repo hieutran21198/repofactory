@@ -89,7 +89,8 @@ on both CI providers and publication targets. Each error message names the docs-
 the invalid rule.
 
 The evaluation test builder supplies `sidebar.feature-order` to each enabled test module. It
-checks the empty default, a selected list, an empty value, a duplicate value, and a wrong type.
+checks the empty default, a selected list, an empty value, a duplicate value, and the declared
+`listOf str` shape. It does not exercise module-system wrong-type rejection.
 
 ## Description
 
