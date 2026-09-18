@@ -85,6 +85,7 @@ let
       notificationTelegramTokenSecret ? "DOCS_SITE_NOTIFICATION_TELEGRAM_TOKEN",
       notificationTelegramChatId ? "",
       staticDirectories ? [ ],
+      featureOrder ? [ ],
       workflowWatchPaths ? [ ],
       beforeNodeSetup ? [ ],
       beforeSiteBuild ? [ ],
@@ -128,6 +129,7 @@ let
             deploy-tool = deployTool;
           };
           static-directories = staticDirectories;
+          sidebar.feature-order = featureOrder;
           workflow = {
             watch-paths = workflowWatchPaths;
             build = {
@@ -220,6 +222,24 @@ let
     beforeNodeSetup = extensionBeforeNodeSetup;
     beforeSiteBuild = extensionBeforeSiteBuild;
     afterSiteBuild = extensionAfterSiteBuild;
+  };
+  selectedFeatureOrder = evalModule {
+    enable = true;
+    featureOrder = [
+      "feat-second"
+      "feat-first"
+    ];
+  };
+  emptyFeatureName = evalModule {
+    enable = true;
+    featureOrder = [ "" ];
+  };
+  duplicateFeatureName = evalModule {
+    enable = true;
+    featureOrder = [
+      "feat-first"
+      "feat-first"
+    ];
   };
   azure = evalModule {
     enable = true;
@@ -520,6 +540,7 @@ let
       url = "https://example.github.io";
       baseUrl = "/repo/";
       staticDirectories = [ ];
+      featureOrder = [ ];
     };
   extensionSiteJsonRoundTrip =
     builtins.fromJSON extensions.files."${site}/site.json".text == {
@@ -530,7 +551,13 @@ let
         "static"
         "generated-static"
       ];
+      featureOrder = [ ];
     };
+  selectedFeatureOrderJson =
+    (builtins.fromJSON selectedFeatureOrder.files."${site}/site.json".text).featureOrder == [
+      "feat-second"
+      "feat-first"
+    ];
   packageJsonPinned =
     pkg.private == true
     && pkg.scripts.build == "docusaurus build"
@@ -552,6 +579,22 @@ let
       "\\*\\*/templates/\\*\\*"
       "numberPrefixParser: false"
     ];
+  configComparatorMatches =
+    let
+      text = textOf "${site}/docusaurus.config.js";
+    in
+    builtins.all (pattern: matches pattern text) [
+      "site[.]featureOrder [?][?] [[]]"
+      "FEATURE_ORDER"
+      "'requirements', 'specifications', 'decisions', 'tasks'"
+      "change-initial"
+      "'index' [|][|] name === 'readme'"
+      "major"
+      "minor"
+      "patch"
+      "codePointAt"
+    ];
+  configHasNoLocaleCompare = !matches "localeCompare" (textOf "${site}/docusaurus.config.js");
   workflowMatches =
     let
       text = textOf ".github/workflows/docs-site.yml";
@@ -624,6 +667,25 @@ let
     && stepOptions.working-directory.testType == "str"
     && stepOptions.working-directory.default == null
     && stepOptions.working-directory.nullable;
+  featureOrderOptionsMatch =
+    let
+      options = (moduleFor { }).options.factory.composition.artifact-driven.docs-site;
+    in
+    options.sidebar.feature-order.default == [ ]
+    &&
+      options.sidebar.feature-order.testType == {
+        kind = "list";
+        element = "str";
+      };
+  featureOrderAssertionsRejected =
+    !assertionsPass emptyFeatureName && !assertionsPass duplicateFeatureName;
+  featureOrderAssertionMessages =
+    builtins.elem "factory.composition.artifact-driven.docs-site.sidebar.feature-order must not contain an empty string" (
+      failedMessages emptyFeatureName
+    )
+    && builtins.elem "factory.composition.artifact-driven.docs-site.sidebar.feature-order must not contain a duplicate name" (
+      failedMessages duplicateFeatureName
+    );
   extensionWorkflowMatches =
     let
       text = extensions.files.".github/workflows/docs-site.yml".text;
@@ -1123,9 +1185,15 @@ assert sourcesExist;
 assert copyModes;
 assert siteJsonRoundTrip;
 assert extensionSiteJsonRoundTrip;
+assert selectedFeatureOrderJson;
 assert packageJsonPinned;
 assert lockfilePinned;
 assert configMatches;
+assert configComparatorMatches;
+assert configHasNoLocaleCompare;
+assert featureOrderOptionsMatch;
+assert featureOrderAssertionsRejected;
+assert featureOrderAssertionMessages;
 assert workflowMatches;
 assert defaultWorkflowUnchanged;
 assert extensionOptionsMatch;
@@ -1201,9 +1269,15 @@ assert invalidSetupsRejected;
     copyModes
     siteJsonRoundTrip
     extensionSiteJsonRoundTrip
+    selectedFeatureOrderJson
     packageJsonPinned
     lockfilePinned
     configMatches
+    configComparatorMatches
+    configHasNoLocaleCompare
+    featureOrderOptionsMatch
+    featureOrderAssertionsRejected
+    featureOrderAssertionMessages
     workflowMatches
     defaultWorkflowUnchanged
     extensionOptionsMatch

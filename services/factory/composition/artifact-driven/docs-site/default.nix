@@ -343,6 +343,11 @@ in
       default = [ ];
       description = "Docusaurus static directories relative to apps/documentation";
     };
+    sidebar.feature-order = _utils.mkListOpt {
+      ofType = lib.types.str;
+      default = [ ];
+      description = "Feature folder basenames in sidebar order";
+    };
     workflow = {
       watch-paths = _utils.mkListOpt {
         ofType = lib.types.str;
@@ -455,6 +460,16 @@ in
           message = "${namespace}.composition.artifact-driven.docs-site static directories and workflow watch paths must not be empty";
         }
         {
+          assertion = builtins.all (name: name != "") docsSite.sidebar.feature-order;
+          message = "${namespace}.composition.artifact-driven.docs-site.sidebar.feature-order must not contain an empty string";
+        }
+        {
+          assertion =
+            builtins.length docsSite.sidebar.feature-order
+            == builtins.length (lib.unique docsSite.sidebar.feature-order);
+          message = "${namespace}.composition.artifact-driven.docs-site.sidebar.feature-order must not contain a duplicate name";
+        }
+        {
           assertion = builtins.all validWorkflowStep workflowSteps;
           message = "${namespace}.composition.artifact-driven.docs-site workflow steps must set exactly one of uses or run; with needs uses; working-directory needs run";
         }
@@ -542,6 +557,7 @@ in
             url = docsSite.url;
             baseUrl = docsSite.base-url;
             staticDirectories = docsSite.static-directories;
+            featureOrder = docsSite.sidebar.feature-order;
           };
           copyMode = "copy";
         };

@@ -1,6 +1,6 @@
 # Feature: Documentation site
 
-**Current version:** 8.0.0
+**Current version:** 9.0.0
 
 ## Summary
 
@@ -12,9 +12,9 @@ project generate and publish static assets without replacing factory-owned files
 
 ## Current artifacts
 
-- [Requirements](versions/8.0.0/requirements/README.md)
-- [Specifications](versions/8.0.0/specifications/README.md)
-- [Decisions](versions/8.0.0/decisions/)
+- [Requirements](versions/9.0.0/requirements/README.md)
+- [Specifications](versions/9.0.0/specifications/README.md)
+- [Decisions](versions/9.0.0/decisions/)
 
 ## Versions
 
@@ -32,6 +32,7 @@ project generate and publish static assets without replacing factory-owned files
 | 6.1.0 | [Point SWA app_location at build output](changes/change-swa-app-location/README.md) | Specifications |  |
 | 7.0.0 | [Add Static Web App deploy tool option](changes/change-swa-deploy-tool-option/README.md) | Requirements |  |
 | 8.0.0 | [Azure Pipelines folder for the docs-site pipeline](changes/change-azure-pipelines-folder/README.md) | Requirements |  |
+| 9.0.0 | [Sidebar sort order](changes/change-sidebar-sort-order/README.md) | Requirements |  |
 
 Versions from 3.0.0 have folders in `versions/`. The earlier versions were folded into 3.0.0 when
 the artifacts moved to the changes and versions layout. Read each change for the artifacts of that
