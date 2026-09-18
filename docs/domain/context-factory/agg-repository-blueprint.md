@@ -45,6 +45,8 @@ adapter but does not activate a composition.
 - A documentation site with the `azure-static-web-app` target selects exactly one deploy tool: `official-task` or `swa-cli`.
 - A documentation site with the `azure-static-web-app` target names the secret that holds the Static Web App deployment token.
 - A documentation site extension adds typed static directories, watch paths, and build steps without replacing a factory-owned file.
+- An enabled documentation site feature order contains unique, non-empty feature folder basenames.
+- A generated documentation site receives the selected feature order through `site.json`.
 - An enabled deployment notification selects one or more supported notification providers and their settings.
 - An artifact-driven repository has one canonical artifact-master role body.
 - Each selected harness receives a rendered artifact-master role with the canonical coordination and message contract.
