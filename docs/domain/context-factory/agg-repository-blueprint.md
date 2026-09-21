@@ -13,7 +13,7 @@ adapter but does not activate a composition.
 
 | From | Command | To |
 | --- | --- | --- |
-| Options selected | Compose repository blueprint | Blueprint composed |
+| Options selected | Compose repository blueprint | Blueprint composed, with UX Design when selected |
 | Wire surface changed | Run contract gates | Gates passed |
 | Gates passed | Publish provider contract | Contract published |
 | Contract published | Compare provider contract | Comparison reported |
@@ -64,6 +64,25 @@ adapter but does not activate a composition.
 - The contract uses the language that the selection rule gives for its wire surface.
 - A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
 - Each release publishes the contract that matches the release.
+- The UX Design enable value defaults to `false`.
+- The UX Design enable option declaration renders no file.
+- When UX Design is off, each generated file is byte-identical to the file before UX Design.
+- When UX Design is off, the repository blueprint adds no designer role, role chapter, Design template, or design tool configuration.
+- UX Design does not change an always-copied guidance, artifact-model, or mixture-of-experts file.
+- When UX Design is on, the repository blueprint adds UX Design only to phase 2 and keeps five phases.
+- An enabled UX Design composition uses an enable-gated merge for each generated addition.
+- An enabled UX Design composition renders the designer expert as a content role for each selected harness.
+- The OpenCode designer expert uses subagent mode and has declared task permission `deny`.
+- An optional UX Design role chapter follows the optional Domain-Driven Design chapter and does not change a base role body.
+- The enabled composition emits the Design template outside the always-copied template source.
+- The enabled release role chapter copies `design/` in phase 5 without a new phase or option.
+- The design-tool `use` value is `unset` or `figma`, and its default is `unset`.
+- The design-tool domain declares only `use` and emits no MCP configuration.
+- The artifact-driven composition adapts `use` to the selected Claude, OpenCode, and Codex harness settings.
+- The `use` value does not enable UX Design and does not gate the Design artifact.
+- A completed Design artifact has UX, Layout, Interaction, Components, and Design System sections.
+- The designer expert reuses a fitting component or token before it defines a new item.
+- The Design artifact does not override a Requirement, Spec, or ADR.
 
 ## Corrective policies
 
@@ -76,12 +95,14 @@ adapter but does not activate a composition.
 | Deployment notification failed | Retry delivery and report the last failure. |
 | Breaking change detected | Block consumer acceptance and inform each consumer team. |
 | Contract gate failed | Keep the prior published contract and report the failure to the provider team. |
+| Requirements accepted | Send Start Design work in phase 2 when UX Design is enabled. |
+| Specifications and decisions written | Send Reconcile Design before the phase 2 join. |
 
 ## Handled commands
 
 | Command | Result | Emits |
 | --- | --- | --- |
-| Compose repository blueprint | Generate the selected files or return an option error. | Repository blueprint composed |
+| Compose repository blueprint | Generate the selected files or return an option error. | Repository blueprint composed; UX Design enabled when selected |
 | Run contract gates | Run lint, verification, and breaking-change comparison, or return a gate error. | Contract gate failed |
 | Publish provider contract | Publish the contract with the release, or return a publication error. | Provider contract published |
 | Compare provider contract | Compare two release contracts and report compatible or breaking. | Breaking change detected |
@@ -94,6 +115,7 @@ adapter but does not activate a composition.
 | Provider contract published | Provider identity, release tag, wire surface, contract language, and contract asset path. |
 | Breaking change detected | Provider identity, old and new release tags, and each added, altered, and removed operation. |
 | Contract gate failed | Gate name, operation identifiers, and the failure cause. |
+| UX Design enabled | Enable value, `use` value, designer role paths, Design template paths, and harness configuration paths. |
 
 ## References by identity
 

@@ -18,5 +18,6 @@ before you add or change a feature.
 | [Artifact versions](feat-artifact-versions/README.md) | 1.0.0 | Makes a change the unit of work on a feature and adds a version folder that holds the full state of the feature. |
 | [Artifact master](feat-artifact-master/README.md) | none | Coordinates each artifact-driven change and gives the user useful information at each phase. |
 | [Provider contracts](feat-provider-contracts/README.md) | none | Gives each polyrepo component a provider-owned contract for its wire surface. |
+| [UX Design](feat-ux-design/README.md) | none | Adds optional user experience design to the artifact-driven workflow. |
 
 Read `versions/<current>/` of a feature for its state. Read `changes/` of a feature for its history.

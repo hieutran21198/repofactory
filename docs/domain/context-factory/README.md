@@ -8,7 +8,9 @@
 
 This context combines repository options into a repository blueprint. It decides which files and
 working rules the factory supplies to a generated repository. It also holds the rule that each
-provider component owns a machine-readable contract for its wire surface.
+provider component owns a machine-readable contract for its wire surface. When the maintainer
+selects UX Design, it also adds a designer expert and a Design artifact to the Specs and ADRs
+phase.
 
 ## Ubiquitous language
 
@@ -43,6 +45,12 @@ provider component owns a machine-readable contract for its wire surface.
 | Provider contract | A machine-readable description of the wire surface of one component, owned by the provider team. |
 | Consumer team | A team that uses the wire surface of a provider component. |
 | Breaking change | A contract change that forces a consumer team to change its code. |
+| UX Design | Optional user experience design for a feature: the UX flow, the layout, the interaction, and the component design. |
+| Designer expert | A role that owns the Design artifact in the Specs and ADRs phase when UX Design is on. |
+| Design artifact | The UX, Layout, Interaction, Components, and Design System output of the designer expert for one feature. |
+| Design tool | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. |
+| Design constraint | A current Spec or ADR that the Design artifact must follow. |
+| Design token | A named design-system value that controls a visual property. |
 
 ## Business rules
 
@@ -68,6 +76,18 @@ provider component owns a machine-readable contract for its wire surface.
 - Each provider component owns one machine-readable contract for its wire surface.
 - A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
 - A consumer team finds the current contract of each provider that it uses.
+- UX Design stays off unless the maintainer selects `artifact-driven.ux-design.enable`.
+- When UX Design is off, the artifact-driven workflow stays unchanged.
+- UX Design belongs to the Specs and ADRs phase. It adds no separate phase.
+- The designer expert uses the accepted Requirements as the baseline and the current Specs and ADRs as constraints.
+- The designer expert reuses existing components and tokens when reuse fits and defines new ones only when reuse does not fit.
+- The Design artifact does not own business behavior, domain rules, permissions, or constraints.
+- The designer expert is a content role. The artifact master owns its coordination.
+- A design tool can help the designer expert, but it never gates the Design artifact.
+- The UX Design option declaration renders no file.
+- When UX Design is off, each generated file stays byte-identical.
+- When UX Design is on, the composition emits only conditional roles, chapters, settings, and templates.
+- The design-tool domain declares `use`. The artifact-driven composition owns each harness MCP setting.
 
 ## Inbound messages
 
@@ -82,6 +102,9 @@ provider component owns a machine-readable contract for its wire surface.
 | Constraint returned | event | Implementation expert |
 | Work sequenced | event | Solution expert |
 | Choice approved | event | User |
+| Requirements accepted | event | Requirement expert |
+| Specifications and decisions written | event | Solution expert |
+| Design completed | event | Designer expert |
 
 ## Outbound messages
 
@@ -99,6 +122,9 @@ provider component owns a machine-readable contract for its wire surface.
 | Constraint returned | event | Solution expert |
 | Option recommended | event | User |
 | Work batched | event | Implementation expert |
+| UX Design enabled | event | Repository maintainer, artifact master |
+| Start Design work | command | Designer expert |
+| Reconcile Design | command | Designer expert |
 
 ## Aggregates
 
