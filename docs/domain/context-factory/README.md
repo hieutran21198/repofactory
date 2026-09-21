@@ -8,7 +8,9 @@
 
 This context combines repository options into a repository blueprint. It decides which files and
 working rules the factory supplies to a generated repository. It also holds the rule that each
-provider component owns a machine-readable contract for its wire surface.
+provider component owns a machine-readable contract for its wire surface. When the maintainer
+selects UX Design, it also adds a designer expert and a Design artifact to the Specs and ADRs
+phase.
 
 ## Ubiquitous language
 
@@ -43,6 +45,10 @@ provider component owns a machine-readable contract for its wire surface.
 | Provider contract | A machine-readable description of the wire surface of one component, owned by the provider team. |
 | Consumer team | A team that uses the wire surface of a provider component. |
 | Breaking change | A contract change that forces a consumer team to change its code. |
+| UX Design | Optional user experience design for a feature: the UX flow, the layout, the interaction, and the component design. |
+| Designer expert | A role that owns the Design artifact in the Specs and ADRs phase when UX Design is on. |
+| Design artifact | The UX, Layout, Interaction, Components, and Design System output of the designer expert for one feature. |
+| Design tool | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. |
 
 ## Business rules
 
@@ -68,6 +74,12 @@ provider component owns a machine-readable contract for its wire surface.
 - Each provider component owns one machine-readable contract for its wire surface.
 - A provider change passes contract lint, runtime verification, and breaking-change comparison before consumers accept it.
 - A consumer team finds the current contract of each provider that it uses.
+- UX Design stays off unless the maintainer selects `artifact-driven.ux-design.enable`.
+- When UX Design is off, the artifact-driven workflow stays unchanged.
+- UX Design belongs to the Specs and ADRs phase. It adds no separate phase.
+- The designer expert uses the accepted Requirements as the baseline and the current Specs and ADRs as constraints.
+- The designer expert reuses existing components and tokens when reuse fits and defines new ones only when reuse does not fit.
+- The Design artifact does not own business behavior, domain rules, permissions, or constraints.
 
 ## Inbound messages
 

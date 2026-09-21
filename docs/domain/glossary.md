@@ -37,3 +37,7 @@ write two rows.
 | Consumer team | context-factory | A team that uses the wire surface of a provider component. | Provider team |
 | Breaking change | context-factory | A contract change that forces a consumer team to change its code. | Compatible change |
 | Work batch | context-factory | One ordered group of phase 4 tasks that the artifact master makes from the recorded dependencies. | Task |
+| UX Design | context-factory | Optional user experience design for a feature: the UX flow, the layout, the interaction, and the component design. | Design system |
+| Designer expert | context-factory | A role that owns the Design artifact in the Specs and ADRs phase when UX Design is on. | Solution expert |
+| Design artifact | context-factory | The UX, Layout, Interaction, Components, and Design System output of the designer expert for one feature. | Specification |
+| Design tool | context-factory | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. | Skill |
