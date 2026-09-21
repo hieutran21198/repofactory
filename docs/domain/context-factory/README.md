@@ -49,6 +49,8 @@ phase.
 | Designer expert | A role that owns the Design artifact in the Specs and ADRs phase when UX Design is on. |
 | Design artifact | The UX, Layout, Interaction, Components, and Design System output of the designer expert for one feature. |
 | Design tool | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. |
+| Design constraint | A current Spec or ADR that the Design artifact must follow. |
+| Design token | A named design-system value that controls a visual property. |
 
 ## Business rules
 
@@ -80,6 +82,12 @@ phase.
 - The designer expert uses the accepted Requirements as the baseline and the current Specs and ADRs as constraints.
 - The designer expert reuses existing components and tokens when reuse fits and defines new ones only when reuse does not fit.
 - The Design artifact does not own business behavior, domain rules, permissions, or constraints.
+- The designer expert is a content role. The artifact master owns its coordination.
+- A design tool can help the designer expert, but it never gates the Design artifact.
+- The UX Design option declaration renders no file.
+- When UX Design is off, each generated file stays byte-identical.
+- When UX Design is on, the composition emits only conditional roles, chapters, settings, and templates.
+- The design-tool domain declares `use`. The artifact-driven composition owns each harness MCP setting.
 
 ## Inbound messages
 
@@ -94,6 +102,9 @@ phase.
 | Constraint returned | event | Implementation expert |
 | Work sequenced | event | Solution expert |
 | Choice approved | event | User |
+| Requirements accepted | event | Requirement expert |
+| Specifications and decisions written | event | Solution expert |
+| Design completed | event | Designer expert |
 
 ## Outbound messages
 
@@ -111,6 +122,9 @@ phase.
 | Constraint returned | event | Solution expert |
 | Option recommended | event | User |
 | Work batched | event | Implementation expert |
+| UX Design enabled | event | Repository maintainer, artifact master |
+| Start Design work | command | Designer expert |
+| Reconcile Design | command | Designer expert |
 
 ## Aggregates
 

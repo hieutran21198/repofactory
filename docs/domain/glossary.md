@@ -41,3 +41,5 @@ write two rows.
 | Designer expert | context-factory | A role that owns the Design artifact in the Specs and ADRs phase when UX Design is on. | Solution expert |
 | Design artifact | context-factory | The UX, Layout, Interaction, Components, and Design System output of the designer expert for one feature. | Specification |
 | Design tool | context-factory | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. | Skill |
+| Design constraint | context-factory | A current Spec or ADR that the Design artifact must follow. | Design choice |
+| Design token | context-factory | A named value from a design system that controls a visual property. | Feature variable |
