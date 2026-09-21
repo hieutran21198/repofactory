@@ -75,6 +75,12 @@ let
       folder ? "azure-pipelines",
       projectProvider ? "unset",
       enable ? false,
+      uxDesign ? false,
+      use ? "unset",
+      harnessUses ? [ ],
+      claudeSettings ? { },
+      opencodeSettings ? { },
+      codexSettings ? { },
       statuses ? defaultStatuses,
       githubOwner ? "example",
       githubProjectNumber ? 7,
@@ -97,6 +103,15 @@ let
           documentation.use = documentation;
           repo-arch.use = architecture;
           design.use = method;
+          design-tool.use = use;
+          agent = {
+            harness = {
+              uses = harnessUses;
+              claude.settings = claudeSettings;
+              opencode.settings = opencodeSettings;
+              codex.settings = codexSettings;
+            };
+          };
           ci-cd.provider = {
             use = ciProvider;
             azure-pipelines.folder = folder;
@@ -129,6 +144,9 @@ let
               chat-id = notificationTelegramChatId;
             };
           };
+        };
+        composition.artifact-driven.ux-design = {
+          enable = uxDesign;
         };
       };
       namespace = "factory";
@@ -261,6 +279,39 @@ let
     projectProvider = "github-projects";
     enable = true;
     folder = "ci/azure";
+  };
+
+  # UX Design fixtures. The off fixtures above stay unchanged and prove the off output.
+  uxEnabledDddOn = evalModule { uxDesign = true; };
+  uxEnabledDddOff = evalModule {
+    uxDesign = true;
+    method = "unset";
+  };
+  uxUnset = evalModule { uxDesign = true; };
+  uxFigmaClaude = evalModule {
+    uxDesign = true;
+    use = "figma";
+    harnessUses = [ "claude" ];
+    claudeSettings = {
+      attribution.commit = "";
+      unrelated = "kept";
+    };
+  };
+  uxFigmaOpenCode = evalModule {
+    uxDesign = true;
+    use = "figma";
+    harnessUses = [ "opencode" ];
+    opencodeSettings = {
+      agent.explore.model = "example/model";
+    };
+  };
+  uxFigmaCodex = evalModule {
+    uxDesign = true;
+    use = "figma";
+    harnessUses = [ "codex" ];
+    codexSettings = {
+      unrelated = "kept";
+    };
   };
 
   invalidSetups = [
@@ -1033,10 +1084,10 @@ let
     ".*The handoff is the last message of the phase build.*"
     ".*Include only information.*"
   ] masterRoleText;
-  roleRender =
-    uses:
+  roleRenderFrom =
+    cfg: uses:
     let
-      agent = configs.multipleOn.factory.domain.agent;
+      agent = cfg.factory.domain.agent;
       rendered = import ../../../domain/agent/role/default.nix {
         inherit lib;
         config.factory = {
@@ -1069,6 +1120,7 @@ let
       };
     in
     rendered.config.files;
+  roleRender = roleRenderFrom configs.multipleOn;
   opencodeRole = (roleRender [ "opencode" ]).".opencode/agents/artifact-master.md".text;
   claudeRole = (roleRender [ "claude" ]).".claude/agents/artifact-master.md".text;
   codexRole =
@@ -1354,6 +1406,226 @@ let
       == "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN";
   providerDoesNotOwnPolicy =
     !(builtins.hasAttr "artifact-status" providerModule.options.factory.domain.project-management);
+
+  # UX Design. The off fixtures above keep their exact output. These checks cover the enabled
+  # branch. This stub proves key selection and values only. It does not prove that a real module
+  # system preserves unrelated harness settings. The real shell render checks that.
+  designToolModule = import ../../../domain/design-tool/default.nix {
+    config.factory._utils = optionUtils;
+    namespace = "factory";
+  };
+  designToolOption =
+    designToolModule.options.factory.domain.design-tool.use.values == [
+      "unset"
+      "figma"
+    ]
+    && designToolModule.options.factory.domain.design-tool.use.default == "unset";
+  designToolDeclaresOnlyUse =
+    builtins.attrNames designToolModule.options.factory.domain.design-tool == [ "use" ];
+  designToolEmitsNoOutput = !(designToolModule ? config);
+
+  uxDesignOptionDefault =
+    compositionModule.options.factory.composition.artifact-driven.ux-design.enable.default == false;
+
+  designerRole = "designer-expert";
+  uxChapterPath = role: ../_assets/ux-design/agent/role/${role}/ROLE.md;
+  uxChapterText = role: builtins.readFile (uxChapterPath role);
+  uxTemplateTarget = "docs/wiki/documentation/artifact-driven/templates/change/design/README.md";
+  uxTemplateSource = ../_assets/ux-design/docs/wiki/documentation/artifact-driven/templates/change/design/README.md;
+  uxTemplateText = builtins.readFile uxTemplateSource;
+
+  uxOffConfigs = [
+    configs.multipleOn
+    configs.multipleOff
+    configs.singleOn
+    configs.singleOff
+    noArchOn
+  ];
+  uxEnabledConfigs = [
+    uxEnabledDddOn
+    uxEnabledDddOff
+  ];
+
+  uxDesignerPresent = builtins.all (
+    cfg: builtins.hasAttr designerRole cfg.factory.domain.agent.role.builder
+  ) uxEnabledConfigs;
+  uxDesignerSubagent = builtins.all (
+    cfg: cfg.factory.domain.agent.role.builder.${designerRole}.harness.opencode.mode == "subagent"
+  ) uxEnabledConfigs;
+  uxDesignerDeny = builtins.all (
+    cfg: declaredTaskPermission cfg designerRole == "deny"
+  ) uxEnabledConfigs;
+  uxDesignerPermissionOnlyGlobal = builtins.all (
+    cfg:
+    !(builtins.hasAttr "permission"
+      cfg.factory.domain.agent.role.builder.${designerRole}.harness.opencode
+    )
+  ) uxEnabledConfigs;
+
+  uxOffNoDesigner = builtins.all (
+    cfg: !(builtins.hasAttr designerRole cfg.factory.domain.agent.role.builder)
+  ) uxOffConfigs;
+  uxOffNoPermission = builtins.all (
+    cfg: !(builtins.hasAttr designerRole (opencodeSettings cfg).agent)
+  ) uxOffConfigs;
+  uxOffNoMcp = builtins.all (
+    cfg:
+    !(builtins.hasAttr ".mcp.json" cfg.files)
+    && !(builtins.hasAttr "mcp" cfg.factory.domain.agent.harness.opencode.settings)
+    && !(builtins.hasAttr "mcp_servers" cfg.factory.domain.agent.harness.codex.settings)
+  ) uxOffConfigs;
+  uxOffNoTemplate = builtins.all (cfg: !(builtins.hasAttr uxTemplateTarget cfg.files)) uxOffConfigs;
+  uxOffNoChapter = builtins.all (
+    cfg: builtins.all (role: builtins.match ".*## UX Design.*" (instruction cfg role) == null) roles
+  ) uxOffConfigs;
+
+  # Only these roles have both a DDD chapter and a UX Design chapter.
+  uxRoles = [
+    "artifact-master"
+    "solution-expert"
+  ];
+  uxChapterAppended = builtins.all (
+    role:
+    instruction uxEnabledDddOn role
+    == base role + "\n" + chapter "multiple" role + "\n" + uxChapterText role
+  ) uxRoles;
+  uxChapterAfterDdd = builtins.all (
+    role:
+    builtins.match ".*## Domain-Driven Design\n.*## UX Design\n.*" (instruction uxEnabledDddOn role)
+    != null
+  ) uxRoles;
+  uxChapterWithoutDdd =
+    builtins.all (
+      role: builtins.match ".*## UX Design\n.*" (instruction uxEnabledDddOff role) != null
+    ) uxRoles
+    && builtins.all (
+      role: builtins.match ".*## Domain-Driven Design.*" (instruction uxEnabledDddOff role) == null
+    ) uxRoles
+    &&
+      builtins.match ".*## Domain-Driven Design.*" (instruction uxEnabledDddOff "requirement-expert")
+      == null;
+  uxReleaseChapter =
+    builtins.match ".*## UX Design\n.*" (instruction uxEnabledDddOn "artifact-release-expert") != null
+    &&
+      builtins.match ".*## Domain-Driven Design.*" (instruction uxEnabledDddOn "artifact-release-expert")
+      == null;
+  uxChaptersBodyOnly =
+    builtins.all (role: builtins.match "## UX Design\n.*" (uxChapterText role) != null)
+      [
+        "artifact-master"
+        "solution-expert"
+        "artifact-release-expert"
+      ];
+  uxMasterChapterText = matchesAll [
+    ".*Start the solution expert and the designer expert in parallel\\..*"
+    ".*Reconcile Design.*"
+    ".*Join the solution output and the design output before the phase 2 commit\\..*"
+    ".*Do not create a sixth phase\\. The phase count stays five\\..*"
+  ] (uxChapterText "artifact-master");
+  uxSolutionChapterText = matchesAll [
+    ".*You work in parallel with the designer expert in phase 2\\..*"
+    ".*Use the accepted Requirements as the baseline.*"
+    ".*Do not edit the Design artifact\\..*"
+    ".*Keep the solution and Design artifact ownership separate\\..*"
+  ] (uxChapterText "solution-expert");
+  uxReleaseChapterText = matchesAll [
+    ".*copy the `design/` folder of the change.*new version.*"
+    ".*Copy and delete only\\. Do not edit the copied Design artifact\\..*"
+    ".*Do not create a sixth phase\\. The phase count stays five\\..*"
+  ] (uxChapterText "artifact-release-expert");
+
+  uxDesignerContent = matchesAll [
+    ".*You own the Design artifact in phase 2.*"
+    ".*accepted Requirements.*"
+    ".*design system, the theme, and the user interface components.*"
+    ".*Reuse each existing component or token that fits.*"
+    ".*reuse does not fit.*"
+    ".*Business behavior.*Domain rules.*Permissions.*Constraints.*"
+    ".*Requirements own the required business outcomes\\..*"
+    ".*When the Design artifact conflicts with a Requirement, a Spec, or an ADR.*"
+    ".*figma-ui-mcp.*Figma Desktop.*"
+    ".*When `use` is `unset`.*full Design artifact without the tool.*"
+    ".*## Procedure: phase 2, Design.*"
+    ".*Reconcile Design.*"
+    ".*UX, Layout, Interaction, Components, and Design System.*"
+    ".*You call no subagent\\. You directly task no expert\\..*"
+  ] (base designerRole);
+
+  uxDesignerBodiesMatch =
+    let
+      opencodeFiles = roleRenderFrom uxEnabledDddOn [ "opencode" ];
+      claudeFiles = roleRenderFrom uxEnabledDddOn [ "claude" ];
+      codexFiles = roleRenderFrom uxEnabledDddOn [ "codex" ];
+      opencodeBody =
+        builtins.match ".*---\n\n(# .*)"
+          opencodeFiles.".opencode/agents/designer-expert.md".text;
+      claudeBody = builtins.match ".*---\n\n(# .*)" claudeFiles.".claude/agents/designer-expert.md".text;
+      codexBody = codexFiles.".codex/agents/designer-expert.toml".toml.developer_instructions;
+    in
+    opencodeBody != null
+    && claudeBody != null
+    && builtins.head opencodeBody == builtins.head claudeBody
+    && builtins.head opencodeBody == codexBody
+    && builtins.head opencodeBody == instruction uxEnabledDddOn designerRole;
+
+  uxTemplateDelivery = builtins.all (
+    cfg:
+    cfg.files.${uxTemplateTarget}.copyMode == "copy"
+    && cfg.files.${uxTemplateTarget}.source == uxTemplateSource
+    && builtins.pathExists cfg.files.${uxTemplateTarget}.source
+  ) uxEnabledConfigs;
+  uxTemplateOutsideAlwaysCopied =
+    !(builtins.pathExists ../../../domain/documentation/artifact-driven/_assets/docs/wiki/documentation/artifact-driven/templates/change/design/README.md);
+  uxTemplateStructure = matchesAll [
+    ".*# Design: <feature name>.*"
+    ".*\\*\\*Change:\\*\\* [[]<change name>[]][(].*changes/change-<name>/README[.]md[)].*"
+    ".*## UX\n.*## Layout\n.*## Interaction\n.*## Components\n.*## Design System.*"
+    ".*[|] Component [|] source [|] use [|].*"
+    ".*[|] Component [|] purpose [|] reason reuse does not fit [|].*"
+    ".*[|] Token [|] source [|] use [|].*"
+    ".*[|] Item [|] type [|] value or rule [|] use [|] reason reuse does not fit [|].*"
+    ".*Requirements, Specs, and ADRs keep.*ownership of those items[.].*"
+    ".*external design tool reference can be added.*does not replace the required Markdown.*"
+  ] uxTemplateText;
+
+  mcpServerName = "figma-ui-mcp";
+  uxFigmaClaudeMcp =
+    builtins.hasAttr ".mcp.json" uxFigmaClaude.files
+    && uxFigmaClaude.files.".mcp.json".copyMode == "copy"
+    && builtins.hasAttr "mcpServers" uxFigmaClaude.files.".mcp.json".json
+    && builtins.hasAttr mcpServerName uxFigmaClaude.files.".mcp.json".json.mcpServers;
+  uxFigmaOpenCodeMcp =
+    builtins.hasAttr "mcp" uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings
+    && builtins.hasAttr mcpServerName uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings.mcp;
+  uxFigmaCodexMcp =
+    builtins.hasAttr "mcp_servers" uxFigmaCodex.factory.domain.agent.harness.codex.settings
+    && builtins.hasAttr mcpServerName uxFigmaCodex.factory.domain.agent.harness.codex.settings.mcp_servers;
+  uxFigmaOnlySelectedHarness =
+    !(builtins.hasAttr ".mcp.json" uxFigmaOpenCode.files)
+    && !(builtins.hasAttr ".mcp.json" uxFigmaCodex.files)
+    && !(builtins.hasAttr "mcp" uxFigmaClaude.factory.domain.agent.harness.opencode.settings)
+    && !(builtins.hasAttr "mcp_servers" uxFigmaClaude.factory.domain.agent.harness.codex.settings)
+    && !(builtins.hasAttr "mcp" uxFigmaCodex.factory.domain.agent.harness.opencode.settings);
+  uxMcpNamesFigma =
+    builtins.all
+      (
+        value:
+        let
+          text = builtins.toJSON value;
+        in
+        builtins.match ".*figma-ui-mcp.*" text != null && builtins.match ".*Figma Desktop.*" text != null
+      )
+      [
+        uxFigmaClaude.files.".mcp.json".json
+        uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings.mcp
+        uxFigmaCodex.factory.domain.agent.harness.codex.settings.mcp_servers
+      ];
+  uxUnsetKeepsDesign =
+    !(builtins.hasAttr ".mcp.json" uxUnset.files)
+    && !(builtins.hasAttr "mcp" uxUnset.factory.domain.agent.harness.opencode.settings)
+    && !(builtins.hasAttr "mcp_servers" uxUnset.factory.domain.agent.harness.codex.settings)
+    && builtins.hasAttr designerRole uxUnset.factory.domain.agent.role.builder
+    && builtins.hasAttr uxTemplateTarget uxUnset.files;
 in
 assert sourcesMatch;
 assert sourcesExist;
@@ -1395,6 +1667,38 @@ assert invalidFolderRejected;
 assert invalidFolderStopsBeforeEmission;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
+assert designToolOption;
+assert designToolDeclaresOnlyUse;
+assert designToolEmitsNoOutput;
+assert uxDesignOptionDefault;
+assert uxDesignerPresent;
+assert uxDesignerSubagent;
+assert uxDesignerDeny;
+assert uxDesignerPermissionOnlyGlobal;
+assert uxOffNoDesigner;
+assert uxOffNoPermission;
+assert uxOffNoMcp;
+assert uxOffNoTemplate;
+assert uxOffNoChapter;
+assert uxChapterAppended;
+assert uxChapterAfterDdd;
+assert uxChapterWithoutDdd;
+assert uxReleaseChapter;
+assert uxChaptersBodyOnly;
+assert uxMasterChapterText;
+assert uxSolutionChapterText;
+assert uxReleaseChapterText;
+assert uxDesignerContent;
+assert uxDesignerBodiesMatch;
+assert uxTemplateDelivery;
+assert uxTemplateOutsideAlwaysCopied;
+assert uxTemplateStructure;
+assert uxFigmaClaudeMcp;
+assert uxFigmaOpenCodeMcp;
+assert uxFigmaCodexMcp;
+assert uxFigmaOnlySelectedHarness;
+assert uxMcpNamesFigma;
+assert uxUnsetKeepsDesign;
 assert skillShipped;
 assert skillFilesExist;
 assert skillOmitted;
@@ -1510,6 +1814,38 @@ assert moexSelfContained;
     invalidFolderStopsBeforeEmission
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
+    designToolOption
+    designToolDeclaresOnlyUse
+    designToolEmitsNoOutput
+    uxDesignOptionDefault
+    uxDesignerPresent
+    uxDesignerSubagent
+    uxDesignerDeny
+    uxDesignerPermissionOnlyGlobal
+    uxOffNoDesigner
+    uxOffNoPermission
+    uxOffNoMcp
+    uxOffNoTemplate
+    uxOffNoChapter
+    uxChapterAppended
+    uxChapterAfterDdd
+    uxChapterWithoutDdd
+    uxReleaseChapter
+    uxChaptersBodyOnly
+    uxMasterChapterText
+    uxSolutionChapterText
+    uxReleaseChapterText
+    uxDesignerContent
+    uxDesignerBodiesMatch
+    uxTemplateDelivery
+    uxTemplateOutsideAlwaysCopied
+    uxTemplateStructure
+    uxFigmaClaudeMcp
+    uxFigmaOpenCodeMcp
+    uxFigmaCodexMcp
+    uxFigmaOnlySelectedHarness
+    uxMcpNamesFigma
+    uxUnsetKeepsDesign
     skillShipped
     skillFilesExist
     skillOmitted

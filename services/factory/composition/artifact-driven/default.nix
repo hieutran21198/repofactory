@@ -150,50 +150,58 @@ let
       ${notificationStep}'';
 in
 {
-  options.${namespace}.composition.artifact-driven.project-issues = {
-    enable = _utils.mkBoolOpt {
-      default = false;
-      description = "Whether to synchronize accepted artifacts to the selected project-management provider";
-    };
-    artifact-status = {
-      feature-summary = _utils.mkStrOpt { default = "Accepted"; };
-      master-requirement = _utils.mkStrOpt { default = "Accepted"; };
-      requirement = _utils.mkStrOpt { default = "Accepted"; };
-      master-specification = _utils.mkStrOpt { default = "Accepted"; };
-      specification = _utils.mkStrOpt { default = "Accepted"; };
-      decision = _utils.mkStrOpt { default = "Accepted"; };
-      implementation-plan = _utils.mkStrOpt { default = "Accepted"; };
-      task = _utils.mkStrOpt { default = "Ready"; };
-      change-summary = _utils.mkStrOpt { default = "Accepted"; };
-      withdrawn = _utils.mkStrOpt { default = "Withdrawn"; };
-    };
-    notification = {
-      uses = _utils.mkListOpt {
-        ofType = lib.types.enum [
-          "google-chat"
-          "slack"
-          "telegram"
-        ];
-        default = [ ];
-        description = "The team providers for accepted artifact summaries";
+  options.${namespace}.composition.artifact-driven = {
+    project-issues = {
+      enable = _utils.mkBoolOpt {
+        default = false;
+        description = "Whether to synchronize accepted artifacts to the selected project-management provider";
       };
-      google-chat.webhook-secret = _utils.mkStrOpt {
-        default = "ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK";
-        description = "The GitHub Actions secret that contains the Google Chat webhook URL";
+      artifact-status = {
+        feature-summary = _utils.mkStrOpt { default = "Accepted"; };
+        master-requirement = _utils.mkStrOpt { default = "Accepted"; };
+        requirement = _utils.mkStrOpt { default = "Accepted"; };
+        master-specification = _utils.mkStrOpt { default = "Accepted"; };
+        specification = _utils.mkStrOpt { default = "Accepted"; };
+        decision = _utils.mkStrOpt { default = "Accepted"; };
+        implementation-plan = _utils.mkStrOpt { default = "Accepted"; };
+        task = _utils.mkStrOpt { default = "Ready"; };
+        change-summary = _utils.mkStrOpt { default = "Accepted"; };
+        withdrawn = _utils.mkStrOpt { default = "Withdrawn"; };
       };
-      slack.webhook-secret = _utils.mkStrOpt {
-        default = "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK";
-        description = "The GitHub Actions secret that contains the Slack webhook URL";
-      };
-      telegram = {
-        token-secret = _utils.mkStrOpt {
-          default = "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN";
-          description = "The GitHub Actions secret that contains the Telegram bot token";
+      notification = {
+        uses = _utils.mkListOpt {
+          ofType = lib.types.enum [
+            "google-chat"
+            "slack"
+            "telegram"
+          ];
+          default = [ ];
+          description = "The team providers for accepted artifact summaries";
         };
-        chat-id = _utils.mkStrOpt {
-          default = "";
-          description = "The Telegram chat ID that receives accepted artifact summaries";
+        google-chat.webhook-secret = _utils.mkStrOpt {
+          default = "ARTIFACT_NOTIFICATION_GOOGLE_CHAT_WEBHOOK";
+          description = "The GitHub Actions secret that contains the Google Chat webhook URL";
         };
+        slack.webhook-secret = _utils.mkStrOpt {
+          default = "ARTIFACT_NOTIFICATION_SLACK_WEBHOOK";
+          description = "The GitHub Actions secret that contains the Slack webhook URL";
+        };
+        telegram = {
+          token-secret = _utils.mkStrOpt {
+            default = "ARTIFACT_NOTIFICATION_TELEGRAM_TOKEN";
+            description = "The GitHub Actions secret that contains the Telegram bot token";
+          };
+          chat-id = _utils.mkStrOpt {
+            default = "";
+            description = "The Telegram chat ID that receives accepted artifact summaries";
+          };
+        };
+      };
+    };
+    ux-design = {
+      enable = _utils.mkBoolOpt {
+        default = false;
+        description = "Whether to add UX Design to the Specs and ADRs phase of the artifact-driven documentation model";
       };
     };
   };
@@ -208,6 +216,48 @@ in
         project-management
         ;
       ddd = design.use == "ddd";
+      designTool = config.${namespace}.domain.design-tool.use;
+      harnessUses = config.${namespace}.domain.agent.harness.uses;
+      uxDesign = config.${namespace}.composition.artifact-driven.ux-design.enable;
+      # The Figma integration is active only when UX Design is on and the tool is selected.
+      figmaMcp = uxDesign && designTool == "figma";
+      figmaServerName = "figma-ui-mcp";
+      # The bridge targets the plugin that runs inside Figma Desktop.
+      figmaMcpEnv = {
+        FIGMA_UI_MCP_TARGET = "Figma Desktop";
+      };
+      figmaClaudeMcp = {
+        mcpServers.${figmaServerName} = {
+          command = "npx";
+          args = [
+            "-y"
+            figmaServerName
+          ];
+          env = figmaMcpEnv;
+        };
+      };
+      figmaOpenCodeMcp = {
+        ${figmaServerName} = {
+          type = "local";
+          command = [
+            "npx"
+            "-y"
+            figmaServerName
+          ];
+          environment = figmaMcpEnv;
+          enabled = true;
+        };
+      };
+      figmaCodexMcp = {
+        ${figmaServerName} = {
+          command = "npx";
+          args = [
+            "-y"
+            figmaServerName
+          ];
+          env = figmaMcpEnv;
+        };
+      };
       projectProvider = project-management.provider.use;
       projectIssues = config.${namespace}.composition.artifact-driven.project-issues;
       artifactIssues = projectIssues.enable;
@@ -344,12 +394,17 @@ in
                 inherit description;
                 # The DDD chapter is a second authored file, appended when the design method is DDD.
                 # It has one version for each repository architecture.
+                # The UX Design chapter is a third authored file, appended after the DDD chapter.
                 instruction =
                   let
-                    chapter = ./_assets/${repo-arch.use}/ddd/agent/role/${name}/ROLE.md;
+                    dddChapter = ./_assets/${repo-arch.use}/ddd/agent/role/${name}/ROLE.md;
+                    uxChapter = ./_assets/ux-design/agent/role/${name}/ROLE.md;
                   in
                   builtins.readFile ./_assets/agent/role/${name}/ROLE.md
-                  + lib.optionalString (ddd && builtins.pathExists chapter) ("\n" + builtins.readFile chapter);
+                  + lib.optionalString (ddd && builtins.pathExists dddChapter) ("\n" + builtins.readFile dddChapter)
+                  + lib.optionalString (uxDesign && builtins.pathExists uxChapter) (
+                    "\n" + builtins.readFile uxChapter
+                  );
                 harness.opencode.mode = "subagent";
               };
 
@@ -375,6 +430,9 @@ in
                 solution-expert = mkRole "solution-expert" "Designs the solution for a feature and writes the specifications, the decisions, and the implementation plan. Owns phases 2 and 3 content of the artifact-driven documentation model, and the phase 5 readiness gate. Calls no subagent and directly tasks no expert; it sends each feasibility-review and owner-selection request to the artifact master. Use when phase 2 or phase 3 of a change starts.";
                 artifact-release-expert = mkRole "artifact-release-expert" "Copies one feature version in phase 5. Owns the copy, the replacement, the deletion, and the feature README update. Does not edit a copied artifact and does not run a design step. Returns a missing-readiness query to the artifact master. Use when phase 5 starts, after the solution expert confirms readiness.";
                 artifact-master = mkCoordinatorRole "artifact-master" "Coordinates one artifact-driven change phase by phase with Plan-Pn then Build-Pn. Owns all expert spawning and coordination only, owns no phase content, and delegates each phase to its content owner. Use for coordinating a change, planning then building a phase, or running the next artifact phase.";
+              }
+              // lib.optionalAttrs uxDesign {
+                designer-expert = mkRole "designer-expert" "Designs the user experience flow, the layout, the interaction, and the components of a feature, and writes the Design artifact. Owns the Design artifact in phase 2 of the artifact-driven documentation model. Calls no subagent and directly tasks no expert. Use when UX Design is enabled and phase 2 of a change starts.";
               };
 
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;
@@ -382,14 +440,26 @@ in
             {
               # The artifact master is the only OpenCode role with task permission.
               # Each built-in content expert has an explicit deny. An absent key is not a deny.
-              harness.opencode.settings = {
-                subagent_depth = 1;
-                agent = {
-                  artifact-master.permission.task = "allow";
-                  requirement-expert.permission.task = "deny";
-                  solution-expert.permission.task = "deny";
-                  artifact-release-expert.permission.task = "deny";
+              # The designer expert joins the content experts only when UX Design is on.
+              harness.opencode.settings =
+                lib.optionalAttrs (figmaMcp && builtins.elem "opencode" harnessUses) {
+                  mcp = lib.mkForce figmaOpenCodeMcp;
+                }
+                // {
+                  subagent_depth = 1;
+                  agent = {
+                    artifact-master.permission.task = "allow";
+                    requirement-expert.permission.task = "deny";
+                    solution-expert.permission.task = "deny";
+                    artifact-release-expert.permission.task = "deny";
+                  }
+                  // lib.optionalAttrs uxDesign {
+                    designer-expert.permission.task = "deny";
+                  };
                 };
+              # The Codex MCP key is written only for a selected Codex harness.
+              harness.codex.settings = lib.optionalAttrs (figmaMcp && builtins.elem "codex" harnessUses) {
+                mcp_servers = lib.mkForce figmaCodexMcp;
               };
               role.builder = builtinRoles;
               skill.general =
@@ -410,6 +480,21 @@ in
                     };
             };
         };
+        # Claude reads its project MCP servers from the project-root .mcp.json.
+        # The Design template target is a nested key, so the always-copied template folder stays unchanged.
+        files =
+          lib.optionalAttrs (figmaMcp && builtins.elem "claude" harnessUses) {
+            ".mcp.json" = {
+              json = figmaClaudeMcp;
+              copyMode = "copy";
+            };
+          }
+          // lib.optionalAttrs uxDesign {
+            "docs/wiki/documentation/artifact-driven/templates/change/design/README.md" = {
+              source = ./_assets/ux-design/docs/wiki/documentation/artifact-driven/templates/change/design/README.md;
+              copyMode = "copy";
+            };
+          };
       })
 
       # Combine the documentation model with the repo-arch seeds.
