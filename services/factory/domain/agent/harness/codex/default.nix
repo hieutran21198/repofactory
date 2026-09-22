@@ -24,6 +24,15 @@ let
   };
   # The adapter is active only for a selected Codex harness, the internal UX Design signal, and figma.
   active = builtins.elem "codex" agent.harness.uses && uxDesign && designTool == "figma";
+
+  # The pen.dev adapter uses the portable launcher and the open .pen document.
+  pencilServerName = "pencil";
+  canonicalPencilServer = {
+    command = "pencil";
+    args = [ ];
+  };
+  # The adapter is active only for a selected Codex harness, the internal UX Design signal, and pencil.
+  pencilActive = builtins.elem "codex" agent.harness.uses && uxDesign && designTool == "pencil";
 in
 {
   options.${namespace}.domain.agent.harness.codex = {
@@ -50,6 +59,18 @@ in
         {
           assertion = codex.settings.mcp_servers.${serverName} == canonicalServer;
           message = "${namespace}.domain.agent.harness.codex.settings.mcp_servers.\"${serverName}\" must equal the canonical Figma MCP server when the Codex adapter is active";
+        }
+      ];
+    })
+
+    # The Pencil entry gate uses the three activation inputs only. It does not read codex.settings.
+    (lib.mkIf pencilActive {
+      ${namespace}.domain.agent.harness.codex.settings.mcp_servers.${pencilServerName} =
+        canonicalPencilServer;
+      assertions = [
+        {
+          assertion = codex.settings.mcp_servers.${pencilServerName} == canonicalPencilServer;
+          message = "${namespace}.domain.agent.harness.codex.settings.mcp_servers.\"${pencilServerName}\" must equal the canonical Pencil MCP server when the Codex adapter is active";
         }
       ];
     })

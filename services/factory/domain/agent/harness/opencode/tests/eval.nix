@@ -38,6 +38,12 @@ let
     environment.FIGMA_UI_MCP_TARGET = "Figma Desktop";
     enabled = true;
   };
+  pencilServerName = "pencil";
+  canonicalPencilServer = {
+    type = "local";
+    command = [ "pencil" ];
+    enabled = true;
+  };
   secondServer = {
     type = "local";
     command = [ "other" ];
@@ -73,6 +79,8 @@ let
 
   assertionsPass = cfg: builtins.all (assertion: assertion.assertion) (cfg.assertions or [ ]);
   moduleSettings = cfg: cfg.factory.domain.agent.harness.opencode.settings or { };
+  moduleMcp = cfg: (moduleSettings cfg).mcp or { };
+  hasPencilEntry = cfg: builtins.hasAttr pencilServerName (moduleMcp cfg);
   rendered = cfg: cfg.files.".opencode/opencode.jsonc".json;
 
   # Each activation input has one off case. The signal-off fixture keeps two unrelated values.
@@ -135,6 +143,62 @@ let
     };
   };
 
+  # Each Pencil activation input has one off case: harness absent, signal off, value not pencil.
+  pencilOffHarness = evalRaw {
+    signal = true;
+    use = "pencil";
+  };
+  pencilOffSignal = evalRaw {
+    uses = [ "opencode" ];
+    use = "pencil";
+  };
+  pencilOffUse = evalRaw {
+    uses = [ "opencode" ];
+    signal = true;
+    use = "unset";
+  };
+  pencilOffCases = [
+    pencilOffHarness
+    pencilOffSignal
+    pencilOffUse
+  ];
+
+  # Pass 1: the module adds only the canonical nested Pencil entry.
+  pencilPass1 = evalRaw {
+    uses = [ "opencode" ];
+    signal = true;
+    use = "pencil";
+  };
+  pencilAdded = moduleSettings pencilPass1;
+  pencilEntry = pencilAdded.mcp.${pencilServerName};
+  pencilCanonicalAdded = pencilEntry == canonicalPencilServer;
+
+  # Pass 2: the final merged settings hold the canonical entry, a model, and a second entry.
+  activePencil = evalRaw {
+    uses = [ "opencode" ];
+    signal = true;
+    use = "pencil";
+    settings = {
+      agent.explore.model = exploreModel;
+      mcp = pencilAdded.mcp // {
+        "other-server" = secondServer;
+      };
+    };
+  };
+  activePencilRendered = rendered activePencil;
+
+  # A different same-name value must fail the final-value assertion.
+  conflictPencil = evalRaw {
+    uses = [ "opencode" ];
+    signal = true;
+    use = "pencil";
+    settings.mcp.${pencilServerName} = {
+      type = "local";
+      command = [ "different" ];
+      enabled = false;
+    };
+  };
+
   offRendered = rendered offSignal;
   offOmitsServer = builtins.all (cfg: !(builtins.hasAttr "mcp" (moduleSettings cfg))) offCases;
   offKeepsUnrelated =
@@ -150,6 +214,41 @@ let
     && activeRendered.mcp."other-server" == secondServer;
   activeAssertionPasses = assertionsPass active;
   conflictAssertionFails = !(assertionsPass conflict);
+
+  # Pencil off cases: no module-owned entry.
+  pencilOffOmitsEntry = builtins.all (cfg: !(hasPencilEntry cfg)) pencilOffCases;
+
+  # Pencil active: exact canonical entry, and no forbidden field.
+  pencilKeysExact =
+    builtins.attrNames pencilEntry == [
+      "command"
+      "enabled"
+      "type"
+    ];
+  pencilNoEnvironment = !(pencilEntry ? environment);
+  pencilNoForbiddenFields =
+    !(pencilEntry ? url)
+    && !(pencilEntry ? document)
+    && !(pencilEntry ? repository)
+    && !(pencilEntry ? remote)
+    && !(pencilEntry ? filesystem);
+
+  # Pencil active: the rendered file uses mcp.pencil, keeps the model and the second entry.
+  activePencilRendersFile = builtins.hasAttr ".opencode/opencode.jsonc" activePencil.files;
+  activePencilUsesMcp = builtins.hasAttr "mcp" activePencilRendered;
+  activePencilCanonicalInFile = activePencilRendered.mcp.${pencilServerName} == canonicalPencilServer;
+  activePencilKeepsUnrelated =
+    activePencilRendered.agent.explore.model == exploreModel
+    && activePencilRendered.mcp."other-server" == secondServer;
+  activePencilAssertionPasses = assertionsPass activePencil;
+  conflictPencilAssertionFails = !(assertionsPass conflictPencil);
+
+  # Cross-exclusion: figma adds no pencil, pencil adds no figma-ui-mcp.
+  figmaAddsNoPencil =
+    !(hasPencilEntry activePass1) && !(builtins.hasAttr pencilServerName activeRendered.mcp);
+  pencilAddsNoFigma =
+    !(builtins.hasAttr serverName (moduleMcp pencilPass1))
+    && !(builtins.hasAttr serverName activePencilRendered.mcp);
 in
 assert canonicalAdded;
 assert offOmitsServer;
@@ -160,6 +259,19 @@ assert activeCanonicalInFile;
 assert activeKeepsUnrelated;
 assert activeAssertionPasses;
 assert conflictAssertionFails;
+assert pencilOffOmitsEntry;
+assert pencilCanonicalAdded;
+assert pencilKeysExact;
+assert pencilNoEnvironment;
+assert pencilNoForbiddenFields;
+assert activePencilRendersFile;
+assert activePencilUsesMcp;
+assert activePencilCanonicalInFile;
+assert activePencilKeepsUnrelated;
+assert activePencilAssertionPasses;
+assert conflictPencilAssertionFails;
+assert figmaAddsNoPencil;
+assert pencilAddsNoFigma;
 {
   inherit
     canonicalAdded
@@ -171,5 +283,18 @@ assert conflictAssertionFails;
     activeKeepsUnrelated
     activeAssertionPasses
     conflictAssertionFails
+    pencilOffOmitsEntry
+    pencilCanonicalAdded
+    pencilKeysExact
+    pencilNoEnvironment
+    pencilNoForbiddenFields
+    activePencilRendersFile
+    activePencilUsesMcp
+    activePencilCanonicalInFile
+    activePencilKeepsUnrelated
+    activePencilAssertionPasses
+    conflictPencilAssertionFails
+    figmaAddsNoPencil
+    pencilAddsNoFigma
     ;
 }

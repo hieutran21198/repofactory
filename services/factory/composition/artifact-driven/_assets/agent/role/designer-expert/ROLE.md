@@ -62,8 +62,20 @@ ADR as a constraint.
 
 ## Design tool
 
-The design tool is optional. When `domain.design-tool.use` is `figma` and `figma-ui-mcp` is
-available, you may use the tool chain `selected harness -> MCP -> figma-ui-mcp -> Figma Desktop`.
+The design tool is optional. `domain.design-tool.use` selects the tool. It has three values:
+`unset`, `figma`, and `pencil`. The default is `unset`.
+
+- When `domain.design-tool.use` is `unset`, work without an external design tool.
+- When `domain.design-tool.use` is `figma` and `figma-ui-mcp` is available, you may use the tool
+  chain `selected harness -> MCP -> figma-ui-mcp -> Figma Desktop`.
+- When `domain.design-tool.use` is `pencil`, you may use the tool chain:
+  `selected harness -> MCP entry pencil -> local pen.dev host -> open .pen document`.
+
+The Pencil adapter permits only the local pen.dev host and the open `.pen` document. The adapter
+grants no remote endpoint and no filesystem privilege.
+The user selects the target document by opening it in pen.dev. You must not select or open a
+document.
+
 The tool can do these operations:
 
 - Inspect designs, components, and variables.
@@ -74,8 +86,9 @@ The tool can do these operations:
 - Capture screenshots.
 
 The external design is working material. The Markdown Design artifact is the repository record.
-When `use` is `unset`, or when the tool is unavailable, or when one tool operation fails, write
-the full Design artifact without the tool. A tool result is never a business rule or a constraint.
+When `use` is `unset`, or when the tool is unavailable, or when no `.pen` document is open, or
+when one tool operation fails, write the full Design artifact without the tool. A tool result is
+never a business rule or a constraint.
 
 ## Rules
 

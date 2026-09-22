@@ -298,6 +298,20 @@ let
       agent.explore.model = "example/model";
     };
   };
+  # The composition writes only the internal signal for the Pencil selection too. This fixture
+  # selects all three harnesses and keeps an unrelated OpenCode setting.
+  uxPencilHarnesses = evalModule {
+    uxDesign = true;
+    use = "pencil";
+    harnessUses = [
+      "claude"
+      "codex"
+      "opencode"
+    ];
+    opencodeSettings = {
+      agent.explore.model = "example/model";
+    };
+  };
 
   invalidSetups = [
     (evalModule {
@@ -1429,6 +1443,20 @@ let
     && !(builtins.hasAttr "mcp" (cfg.factory.domain.agent.harness.opencode.settings or { }))
     && !(builtins.hasAttr "mcp_servers" (cfg.factory.domain.agent.harness.codex.settings or { }))
   ) (uxEnabledConfigs ++ uxOffConfigs ++ [ uxFigmaOpenCode ]);
+  # The Pencil fixture keeps the internal-signal-only handoff: the signal is true, the composition
+  # writes no MCP value, and the designer expert and the Design template stay.
+  uxPencilSignalEnabled = internalUxDesignSignal uxPencilHarnesses == true;
+  uxPencilWritesNoMcp =
+    !(builtins.hasAttr ".mcp.json" (uxPencilHarnesses.files or { }))
+    && !(builtins.hasAttr "mcp" (
+      uxPencilHarnesses.factory.domain.agent.harness.opencode.settings or { }
+    ))
+    && !(builtins.hasAttr "mcp_servers" (
+      uxPencilHarnesses.factory.domain.agent.harness.codex.settings or { }
+    ))
+    && !(builtins.hasAttr "mcpServers" (
+      uxPencilHarnesses.factory.domain.agent.harness.claude.settings or { }
+    ));
 
   uxDesignerPresent = builtins.all (
     cfg: builtins.hasAttr designerRole cfg.factory.domain.agent.role.builder
@@ -1529,6 +1557,16 @@ let
     ".*You call no subagent\\. You directly task no expert\\..*"
   ] (base designerRole);
 
+  # The Pencil contract names the three values, uses the local host and the open .pen document,
+  # grants no remote or filesystem privilege, and keeps the Design artifact independent of the tool.
+  uxDesignerPencilContent = matchesAll [
+    ".*`unset`, `figma`, and `pencil`.*"
+    ".*selected harness -> MCP entry pencil -> local pen\\.dev host -> open \\.pen document.*"
+    ".*no remote endpoint and no filesystem privilege.*"
+    ".*user selects the target document by opening it in pen\\.dev.*"
+    ".*full Design artifact without the tool.*"
+  ] (base designerRole);
+
   uxDesignerBodiesMatch =
     let
       opencodeFiles = roleRenderFrom uxEnabledDddOn [ "opencode" ];
@@ -1575,6 +1613,9 @@ let
   uxUnsetKeepsDesign =
     builtins.hasAttr designerRole uxUnset.factory.domain.agent.role.builder
     && builtins.hasAttr uxTemplateTarget uxUnset.files;
+  uxPencilKeepsUxDesign =
+    builtins.hasAttr designerRole uxPencilHarnesses.factory.domain.agent.role.builder
+    && builtins.hasAttr uxTemplateTarget uxPencilHarnesses.files;
 in
 assert sourcesMatch;
 assert sourcesExist;
@@ -1644,6 +1685,10 @@ assert uxTemplateOutsideAlwaysCopied;
 assert uxTemplateStructure;
 assert uxOpenCodeFixtureKeepsUxDesign;
 assert uxUnsetKeepsDesign;
+assert uxPencilSignalEnabled;
+assert uxPencilWritesNoMcp;
+assert uxPencilKeepsUxDesign;
+assert uxDesignerPencilContent;
 assert skillShipped;
 assert skillFilesExist;
 assert skillOmitted;
@@ -1787,6 +1832,10 @@ assert moexSelfContained;
     uxTemplateStructure
     uxOpenCodeFixtureKeepsUxDesign
     uxUnsetKeepsDesign
+    uxPencilSignalEnabled
+    uxPencilWritesNoMcp
+    uxPencilKeepsUxDesign
+    uxDesignerPencilContent
     skillShipped
     skillFilesExist
     skillOmitted
