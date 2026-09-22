@@ -6,8 +6,8 @@
 ## Description
 
 The repository blueprint combines selected domains and compositions into generated files. Each
-composition owns its activation and cross-domain policies. A provider selection identifies an
-adapter but does not activate a composition.
+composition owns its activation. Each harness module owns the settings that it renders. A
+provider selection identifies an adapter but does not activate a composition.
 
 ## State transitions
 
@@ -77,8 +77,14 @@ adapter but does not activate a composition.
 - The enabled composition emits the Design template outside the always-copied template source.
 - The enabled release role chapter copies `design/` in phase 5 without a new phase or option.
 - The design-tool `use` value is `unset` or `figma`, and its default is `unset`.
-- The design-tool domain declares only `use` and emits no MCP configuration.
-- The artifact-driven composition adapts `use` to the selected Claude, OpenCode, and Codex harness settings.
+- The design-tool domain declares only `use` and emits no MCP setting.
+- The `use` value alone emits no MCP setting.
+- The artifact-driven composition sets the internal harness UX Design signal to its enable value.
+- A harness module does not read an option in the composition namespace.
+- Each selected Claude, OpenCode, or Codex harness module owns its MCP setting and output.
+- A harness module adds `figma-ui-mcp` only when UX Design is on and `use` is `figma`.
+- A harness module preserves each unrelated harness setting and each MCP entry with a different name.
+- An active harness module rejects a final `figma-ui-mcp` value that differs from its canonical value.
 - The `use` value does not enable UX Design and does not gate the Design artifact.
 - A completed Design artifact has UX, Layout, Interaction, Components, and Design System sections.
 - The designer expert reuses a fitting component or token before it defines a new item.

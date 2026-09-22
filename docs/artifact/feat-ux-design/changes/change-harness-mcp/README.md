@@ -3,7 +3,7 @@
 **Feature:** [UX Design](../../README.md)
 **From:** 1.0.0
 **To:** 1.1.0
-**Type:** Specifications
+**Type:** Specifications, Decisions
 
 ## Reason
 
@@ -18,4 +18,5 @@ still produces the full Design artifact without it.
 
 ## Artifacts
 
-No specification files exist yet in this change. Phase 2 adds the specifications.
+- [Specifications](specifications/README.md)
+- [Design tool selection decision](decisions/adr-design-tool-selection.md)
