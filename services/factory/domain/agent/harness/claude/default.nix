@@ -24,6 +24,17 @@ let
   };
   # The adapter is active only for a selected Claude harness, the internal UX Design signal, and figma.
   active = builtins.elem "claude" agent.harness.uses && uxDesign && designTool == "figma";
+
+  # The pen.dev adapter uses the portable launcher and the open .pen document.
+  pencilServerName = "pencil";
+  canonicalPencilServer = {
+    type = "stdio";
+    command = "pencil";
+    args = [ ];
+    env = { };
+  };
+  # The adapter is active only for a selected Claude harness, the internal UX Design signal, and pencil.
+  pencilActive = builtins.elem "claude" agent.harness.uses && uxDesign && designTool == "pencil";
 in
 {
   options.${namespace}.domain.agent.harness.claude = {
@@ -59,6 +70,17 @@ in
         {
           assertion = claude.mcp-servers.${serverName} == canonicalServer;
           message = "${namespace}.domain.agent.harness.claude.mcp-servers.\"${serverName}\" must equal the canonical Figma MCP server when the Claude adapter is active";
+        }
+      ];
+    })
+
+    # The Pencil entry gate uses the three activation inputs only. It does not read mcp-servers.
+    (lib.mkIf pencilActive {
+      ${namespace}.domain.agent.harness.claude.mcp-servers.${pencilServerName} = canonicalPencilServer;
+      assertions = [
+        {
+          assertion = claude.mcp-servers.${pencilServerName} == canonicalPencilServer;
+          message = "${namespace}.domain.agent.harness.claude.mcp-servers.\"${pencilServerName}\" must equal the canonical Pencil MCP server when the Claude adapter is active";
         }
       ];
     })

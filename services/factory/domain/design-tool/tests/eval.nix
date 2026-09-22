@@ -32,34 +32,38 @@ let
   optionValues = option.type.functor.payload.values;
   acceptedUnset = (evalWith "unset").config.${namespace}.domain.design-tool.use == "unset";
   acceptedFigma = (evalWith "figma").config.${namespace}.domain.design-tool.use == "figma";
+  acceptedPencil = (evalWith "pencil").config.${namespace}.domain.design-tool.use == "pencil";
   unsupportedRejected =
     !(builtins.tryEval (evalWith "sketch").config.${namespace}.domain.design-tool.use).success;
 
-  valuesAreUnsetAndFigma =
+  valuesAreUnsetFigmaAndPencil =
     optionValues == [
       "unset"
       "figma"
+      "pencil"
     ];
   defaultIsUnset = option.default == "unset";
   declaresOnlyUse =
     builtins.attrNames designToolModule.options.${namespace}.domain.design-tool == [ "use" ];
   emitsNoConfig = !(designToolModule ? config);
 in
-assert valuesAreUnsetAndFigma;
+assert valuesAreUnsetFigmaAndPencil;
 assert defaultIsUnset;
 assert declaresOnlyUse;
 assert emitsNoConfig;
 assert acceptedUnset;
 assert acceptedFigma;
+assert acceptedPencil;
 assert unsupportedRejected;
 {
   inherit
-    valuesAreUnsetAndFigma
+    valuesAreUnsetFigmaAndPencil
     defaultIsUnset
     declaresOnlyUse
     emitsNoConfig
     acceptedUnset
     acceptedFigma
+    acceptedPencil
     unsupportedRejected
     ;
 }

@@ -12,6 +12,7 @@ in
       values = [
         "unset"
         "figma"
+        "pencil"
       ];
       default = "unset";
       description = "Design tool to use";
