@@ -216,48 +216,7 @@ in
         project-management
         ;
       ddd = design.use == "ddd";
-      designTool = config.${namespace}.domain.design-tool.use;
-      harnessUses = config.${namespace}.domain.agent.harness.uses;
       uxDesign = config.${namespace}.composition.artifact-driven.ux-design.enable;
-      # The Figma integration is active only when UX Design is on and the tool is selected.
-      figmaMcp = uxDesign && designTool == "figma";
-      figmaServerName = "figma-ui-mcp";
-      # The bridge targets the plugin that runs inside Figma Desktop.
-      figmaMcpEnv = {
-        FIGMA_UI_MCP_TARGET = "Figma Desktop";
-      };
-      figmaClaudeMcp = {
-        mcpServers.${figmaServerName} = {
-          command = "npx";
-          args = [
-            "-y"
-            figmaServerName
-          ];
-          env = figmaMcpEnv;
-        };
-      };
-      figmaOpenCodeMcp = {
-        ${figmaServerName} = {
-          type = "local";
-          command = [
-            "npx"
-            "-y"
-            figmaServerName
-          ];
-          environment = figmaMcpEnv;
-          enabled = true;
-        };
-      };
-      figmaCodexMcp = {
-        ${figmaServerName} = {
-          command = "npx";
-          args = [
-            "-y"
-            figmaServerName
-          ];
-          env = figmaMcpEnv;
-        };
-      };
       projectProvider = project-management.provider.use;
       projectIssues = config.${namespace}.composition.artifact-driven.project-issues;
       artifactIssues = projectIssues.enable;
@@ -438,28 +397,23 @@ in
               inherit (import ../_utils.nix { inherit lib; }) loadRoleSkills;
             in
             {
+              # The harness domain receives only the internal UX Design signal.
+              # Each harness module owns its MCP setting and its rendered output.
+              harness.ux-design.enable = uxDesign;
               # The artifact master is the only OpenCode role with task permission.
               # Each built-in content expert has an explicit deny. An absent key is not a deny.
               # The designer expert joins the content experts only when UX Design is on.
-              harness.opencode.settings =
-                lib.optionalAttrs (figmaMcp && builtins.elem "opencode" harnessUses) {
-                  mcp = lib.mkForce figmaOpenCodeMcp;
+              harness.opencode.settings = {
+                subagent_depth = 1;
+                agent = {
+                  artifact-master.permission.task = "allow";
+                  requirement-expert.permission.task = "deny";
+                  solution-expert.permission.task = "deny";
+                  artifact-release-expert.permission.task = "deny";
                 }
-                // {
-                  subagent_depth = 1;
-                  agent = {
-                    artifact-master.permission.task = "allow";
-                    requirement-expert.permission.task = "deny";
-                    solution-expert.permission.task = "deny";
-                    artifact-release-expert.permission.task = "deny";
-                  }
-                  // lib.optionalAttrs uxDesign {
-                    designer-expert.permission.task = "deny";
-                  };
+                // lib.optionalAttrs uxDesign {
+                  designer-expert.permission.task = "deny";
                 };
-              # The Codex MCP key is written only for a selected Codex harness.
-              harness.codex.settings = lib.optionalAttrs (figmaMcp && builtins.elem "codex" harnessUses) {
-                mcp_servers = lib.mkForce figmaCodexMcp;
               };
               role.builder = builtinRoles;
               skill.general =
@@ -480,21 +434,13 @@ in
                     };
             };
         };
-        # Claude reads its project MCP servers from the project-root .mcp.json.
         # The Design template target is a nested key, so the always-copied template folder stays unchanged.
-        files =
-          lib.optionalAttrs (figmaMcp && builtins.elem "claude" harnessUses) {
-            ".mcp.json" = {
-              json = figmaClaudeMcp;
-              copyMode = "copy";
-            };
-          }
-          // lib.optionalAttrs uxDesign {
-            "docs/wiki/documentation/artifact-driven/templates/change/design/README.md" = {
-              source = ./_assets/ux-design/docs/wiki/documentation/artifact-driven/templates/change/design/README.md;
-              copyMode = "copy";
-            };
+        files = lib.optionalAttrs uxDesign {
+          "docs/wiki/documentation/artifact-driven/templates/change/design/README.md" = {
+            source = ./_assets/ux-design/docs/wiki/documentation/artifact-driven/templates/change/design/README.md;
+            copyMode = "copy";
           };
+        };
       })
 
       # Combine the documentation model with the repo-arch seeds.

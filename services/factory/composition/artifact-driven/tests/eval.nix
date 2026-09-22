@@ -288,29 +288,14 @@ let
     method = "unset";
   };
   uxUnset = evalModule { uxDesign = true; };
-  uxFigmaClaude = evalModule {
-    uxDesign = true;
-    use = "figma";
-    harnessUses = [ "claude" ];
-    claudeSettings = {
-      attribution.commit = "";
-      unrelated = "kept";
-    };
-  };
+  # The composition no longer owns an MCP setting. This fixture keeps an unrelated OpenCode
+  # setting. The real module system proves that the setting survives the merge in task-verify.
   uxFigmaOpenCode = evalModule {
     uxDesign = true;
     use = "figma";
     harnessUses = [ "opencode" ];
     opencodeSettings = {
       agent.explore.model = "example/model";
-    };
-  };
-  uxFigmaCodex = evalModule {
-    uxDesign = true;
-    use = "figma";
-    harnessUses = [ "codex" ];
-    codexSettings = {
-      unrelated = "kept";
     };
   };
 
@@ -1409,21 +1394,7 @@ let
 
   # UX Design. The off fixtures above keep their exact output. These checks cover the enabled
   # branch. This stub proves key selection and values only. It does not prove that a real module
-  # system preserves unrelated harness settings. The real shell render checks that.
-  designToolModule = import ../../../domain/design-tool/default.nix {
-    config.factory._utils = optionUtils;
-    namespace = "factory";
-  };
-  designToolOption =
-    designToolModule.options.factory.domain.design-tool.use.values == [
-      "unset"
-      "figma"
-    ]
-    && designToolModule.options.factory.domain.design-tool.use.default == "unset";
-  designToolDeclaresOnlyUse =
-    builtins.attrNames designToolModule.options.factory.domain.design-tool == [ "use" ];
-  designToolEmitsNoOutput = !(designToolModule ? config);
-
+  # system preserves unrelated harness settings. The real module system checks that in task-verify.
   uxDesignOptionDefault =
     compositionModule.options.factory.composition.artifact-driven.ux-design.enable.default == false;
 
@@ -1446,6 +1417,19 @@ let
     uxEnabledDddOff
   ];
 
+  # The composition hands the UX Design enable value to the harness domain as the internal
+  # signal. It writes no harness MCP setting; each harness module owns that.
+  internalUxDesignSignal = cfg: cfg.factory.domain.agent.harness.ux-design.enable or null;
+  uxSignalHandoffEnabled = builtins.all (cfg: internalUxDesignSignal cfg == true) uxEnabledConfigs;
+  uxSignalHandoffDisabled = builtins.all (cfg: internalUxDesignSignal cfg == false) uxOffConfigs;
+  uxSignalHandoffAbsent = internalUxDesignSignal documentationOff == null;
+  compositionWritesNoMcp = builtins.all (
+    cfg:
+    !(builtins.hasAttr ".mcp.json" (cfg.files or { }))
+    && !(builtins.hasAttr "mcp" (cfg.factory.domain.agent.harness.opencode.settings or { }))
+    && !(builtins.hasAttr "mcp_servers" (cfg.factory.domain.agent.harness.codex.settings or { }))
+  ) (uxEnabledConfigs ++ uxOffConfigs ++ [ uxFigmaOpenCode ]);
+
   uxDesignerPresent = builtins.all (
     cfg: builtins.hasAttr designerRole cfg.factory.domain.agent.role.builder
   ) uxEnabledConfigs;
@@ -1467,12 +1451,6 @@ let
   ) uxOffConfigs;
   uxOffNoPermission = builtins.all (
     cfg: !(builtins.hasAttr designerRole (opencodeSettings cfg).agent)
-  ) uxOffConfigs;
-  uxOffNoMcp = builtins.all (
-    cfg:
-    !(builtins.hasAttr ".mcp.json" cfg.files)
-    && !(builtins.hasAttr "mcp" cfg.factory.domain.agent.harness.opencode.settings)
-    && !(builtins.hasAttr "mcp_servers" cfg.factory.domain.agent.harness.codex.settings)
   ) uxOffConfigs;
   uxOffNoTemplate = builtins.all (cfg: !(builtins.hasAttr uxTemplateTarget cfg.files)) uxOffConfigs;
   uxOffNoChapter = builtins.all (
@@ -1588,43 +1566,14 @@ let
     ".*external design tool reference can be added.*does not replace the required Markdown.*"
   ] uxTemplateText;
 
-  mcpServerName = "figma-ui-mcp";
-  uxFigmaClaudeMcp =
-    builtins.hasAttr ".mcp.json" uxFigmaClaude.files
-    && uxFigmaClaude.files.".mcp.json".copyMode == "copy"
-    && builtins.hasAttr "mcpServers" uxFigmaClaude.files.".mcp.json".json
-    && builtins.hasAttr mcpServerName uxFigmaClaude.files.".mcp.json".json.mcpServers;
-  uxFigmaOpenCodeMcp =
-    builtins.hasAttr "mcp" uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings
-    && builtins.hasAttr mcpServerName uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings.mcp;
-  uxFigmaCodexMcp =
-    builtins.hasAttr "mcp_servers" uxFigmaCodex.factory.domain.agent.harness.codex.settings
-    && builtins.hasAttr mcpServerName uxFigmaCodex.factory.domain.agent.harness.codex.settings.mcp_servers;
-  uxFigmaOnlySelectedHarness =
-    !(builtins.hasAttr ".mcp.json" uxFigmaOpenCode.files)
-    && !(builtins.hasAttr ".mcp.json" uxFigmaCodex.files)
-    && !(builtins.hasAttr "mcp" uxFigmaClaude.factory.domain.agent.harness.opencode.settings)
-    && !(builtins.hasAttr "mcp_servers" uxFigmaClaude.factory.domain.agent.harness.codex.settings)
-    && !(builtins.hasAttr "mcp" uxFigmaCodex.factory.domain.agent.harness.opencode.settings);
-  uxMcpNamesFigma =
-    builtins.all
-      (
-        value:
-        let
-          text = builtins.toJSON value;
-        in
-        builtins.match ".*figma-ui-mcp.*" text != null && builtins.match ".*Figma Desktop.*" text != null
-      )
-      [
-        uxFigmaClaude.files.".mcp.json".json
-        uxFigmaOpenCode.factory.domain.agent.harness.opencode.settings.mcp
-        uxFigmaCodex.factory.domain.agent.harness.codex.settings.mcp_servers
-      ];
+  # The composition writes no MCP setting. The OpenCode fixture keeps its unrelated setting and
+  # still receives the Design template and the designer role. The real module system proves the
+  # merge of the unrelated setting in task-verify.
+  uxOpenCodeFixtureKeepsUxDesign =
+    builtins.hasAttr designerRole uxFigmaOpenCode.factory.domain.agent.role.builder
+    && builtins.hasAttr uxTemplateTarget uxFigmaOpenCode.files;
   uxUnsetKeepsDesign =
-    !(builtins.hasAttr ".mcp.json" uxUnset.files)
-    && !(builtins.hasAttr "mcp" uxUnset.factory.domain.agent.harness.opencode.settings)
-    && !(builtins.hasAttr "mcp_servers" uxUnset.factory.domain.agent.harness.codex.settings)
-    && builtins.hasAttr designerRole uxUnset.factory.domain.agent.role.builder
+    builtins.hasAttr designerRole uxUnset.factory.domain.agent.role.builder
     && builtins.hasAttr uxTemplateTarget uxUnset.files;
 in
 assert sourcesMatch;
@@ -1667,17 +1616,17 @@ assert invalidFolderRejected;
 assert invalidFolderStopsBeforeEmission;
 assert compositionOwnsPolicy;
 assert providerDoesNotOwnPolicy;
-assert designToolOption;
-assert designToolDeclaresOnlyUse;
-assert designToolEmitsNoOutput;
 assert uxDesignOptionDefault;
+assert uxSignalHandoffEnabled;
+assert uxSignalHandoffDisabled;
+assert uxSignalHandoffAbsent;
+assert compositionWritesNoMcp;
 assert uxDesignerPresent;
 assert uxDesignerSubagent;
 assert uxDesignerDeny;
 assert uxDesignerPermissionOnlyGlobal;
 assert uxOffNoDesigner;
 assert uxOffNoPermission;
-assert uxOffNoMcp;
 assert uxOffNoTemplate;
 assert uxOffNoChapter;
 assert uxChapterAppended;
@@ -1693,11 +1642,7 @@ assert uxDesignerBodiesMatch;
 assert uxTemplateDelivery;
 assert uxTemplateOutsideAlwaysCopied;
 assert uxTemplateStructure;
-assert uxFigmaClaudeMcp;
-assert uxFigmaOpenCodeMcp;
-assert uxFigmaCodexMcp;
-assert uxFigmaOnlySelectedHarness;
-assert uxMcpNamesFigma;
+assert uxOpenCodeFixtureKeepsUxDesign;
 assert uxUnsetKeepsDesign;
 assert skillShipped;
 assert skillFilesExist;
@@ -1814,17 +1759,17 @@ assert moexSelfContained;
     invalidFolderStopsBeforeEmission
     compositionOwnsPolicy
     providerDoesNotOwnPolicy
-    designToolOption
-    designToolDeclaresOnlyUse
-    designToolEmitsNoOutput
     uxDesignOptionDefault
+    uxSignalHandoffEnabled
+    uxSignalHandoffDisabled
+    uxSignalHandoffAbsent
+    compositionWritesNoMcp
     uxDesignerPresent
     uxDesignerSubagent
     uxDesignerDeny
     uxDesignerPermissionOnlyGlobal
     uxOffNoDesigner
     uxOffNoPermission
-    uxOffNoMcp
     uxOffNoTemplate
     uxOffNoChapter
     uxChapterAppended
@@ -1840,11 +1785,7 @@ assert moexSelfContained;
     uxTemplateDelivery
     uxTemplateOutsideAlwaysCopied
     uxTemplateStructure
-    uxFigmaClaudeMcp
-    uxFigmaOpenCodeMcp
-    uxFigmaCodexMcp
-    uxFigmaOnlySelectedHarness
-    uxMcpNamesFigma
+    uxOpenCodeFixtureKeepsUxDesign
     uxUnsetKeepsDesign
     skillShipped
     skillFilesExist

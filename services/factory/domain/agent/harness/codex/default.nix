@@ -6,6 +6,24 @@
 }:
 let
   inherit (config.${namespace}) _utils;
+  inherit (config.${namespace}.domain) agent;
+  inherit (agent.harness) codex;
+  designTool = config.${namespace}.domain.design-tool.use;
+  uxDesign = agent.harness.ux-design.enable;
+  serverName = "figma-ui-mcp";
+  # The bridge targets the plugin that runs inside Figma Desktop.
+  canonicalServer = {
+    command = "npx";
+    args = [
+      "-y"
+      serverName
+    ];
+    env = {
+      FIGMA_UI_MCP_TARGET = "Figma Desktop";
+    };
+  };
+  # The adapter is active only for a selected Codex harness, the internal UX Design signal, and figma.
+  active = builtins.elem "codex" agent.harness.uses && uxDesign && designTool == "figma";
 in
 {
   options.${namespace}.domain.agent.harness.codex = {
@@ -16,15 +34,24 @@ in
     };
   };
 
-  config =
-    let
-      inherit (config.${namespace}.domain) agent;
-      inherit (agent.harness) codex;
-    in
-    lib.mkIf (builtins.elem "codex" agent.harness.uses && codex.settings != { }) {
+  config = lib.mkMerge [
+    # The file gate stays separate from the entry gate. It reads the final settings value.
+    (lib.mkIf (builtins.elem "codex" agent.harness.uses && codex.settings != { }) {
       files.".codex/config.toml" = {
         toml = codex.settings;
         copyMode = "copy";
       };
-    };
+    })
+
+    # The entry gate uses the three activation inputs only. It does not read codex.settings.
+    (lib.mkIf active {
+      ${namespace}.domain.agent.harness.codex.settings.mcp_servers.${serverName} = canonicalServer;
+      assertions = [
+        {
+          assertion = codex.settings.mcp_servers.${serverName} == canonicalServer;
+          message = "${namespace}.domain.agent.harness.codex.settings.mcp_servers.\"${serverName}\" must equal the canonical Figma MCP server when the Codex adapter is active";
+        }
+      ];
+    })
+  ];
 }
