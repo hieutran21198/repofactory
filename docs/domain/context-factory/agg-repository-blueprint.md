@@ -7,13 +7,14 @@
 
 The repository blueprint combines selected domains and compositions into generated files. Each
 composition owns its activation. Each harness module owns the settings that it renders. A
-provider selection identifies an adapter but does not activate a composition.
+provider selection identifies an adapter but does not activate a composition. The Pencil adapter
+uses a local pen.dev host and the open `.pen` document.
 
 ## State transitions
 
 | From | Command | To |
 | --- | --- | --- |
-| Options selected | Compose repository blueprint | Blueprint composed, with UX Design when selected |
+| Options selected | Compose repository blueprint | Blueprint composed with the selected design tool and UX Design when enabled |
 | Wire surface changed | Run contract gates | Gates passed |
 | Gates passed | Publish provider contract | Contract published |
 | Contract published | Compare provider contract | Comparison reported |
@@ -76,16 +77,28 @@ provider selection identifies an adapter but does not activate a composition.
 - An optional UX Design role chapter follows the optional Domain-Driven Design chapter and does not change a base role body.
 - The enabled composition emits the Design template outside the always-copied template source.
 - The enabled release role chapter copies `design/` in phase 5 without a new phase or option.
-- The design-tool `use` value is `unset` or `figma`, and its default is `unset`.
+- The design-tool `use` value is `unset`, `figma`, or `pencil`, and its default is `unset`.
 - The design-tool domain declares only `use` and emits no MCP setting.
 - The `use` value alone emits no MCP setting.
 - The artifact-driven composition sets the internal harness UX Design signal to its enable value.
 - A harness module does not read an option in the composition namespace.
 - Each selected Claude, OpenCode, or Codex harness module owns its MCP setting and output.
 - A harness module adds `figma-ui-mcp` only when UX Design is on and `use` is `figma`.
+- A harness module adds `pencil` only when UX Design is on and `use` is `pencil`.
+- The Pencil MCP entry key is `pencil` in each harness.
+- The Pencil MCP transport is stdio, and its portable command is `pencil`.
+- Claude uses `type = "stdio"`, `command = "pencil"`, empty `args`, and empty `env`.
+- OpenCode uses `type = "local"`, `command = ["pencil"]`, and `enabled = true`.
+- Codex uses `command = "pencil"` and empty `args`.
+- The Pencil adapter uses only the local pen.dev host and the open `.pen` document.
+- The Pencil MCP entry has no machine-specific path or document path.
+- The Pencil adapter grants no remote endpoint or filesystem privilege.
+- A Pencil selection does not add `figma-ui-mcp`, and a Figma selection does not add `pencil`.
 - A harness module preserves each unrelated harness setting and each MCP entry with a different name.
 - An active harness module rejects a final `figma-ui-mcp` value that differs from its canonical value.
+- An active harness module rejects a final `pencil` value that differs from its canonical local value.
 - The `use` value does not enable UX Design and does not gate the Design artifact.
+- An unavailable design tool or a failed tool operation does not block the Design artifact.
 - A completed Design artifact has UX, Layout, Interaction, Components, and Design System sections.
 - The designer expert reuses a fitting component or token before it defines a new item.
 - The Design artifact does not override a Requirement, Spec, or ADR.
@@ -101,14 +114,14 @@ provider selection identifies an adapter but does not activate a composition.
 | Deployment notification failed | Retry delivery and report the last failure. |
 | Breaking change detected | Block consumer acceptance and inform each consumer team. |
 | Contract gate failed | Keep the prior published contract and report the failure to the provider team. |
-| Requirements accepted | Send Start Design work in phase 2 when UX Design is enabled. |
+| Requirements accepted | Send Start Design work with the selected `use` value in phase 2 when UX Design is enabled. |
 | Specifications and decisions written | Send Reconcile Design before the phase 2 join. |
 
 ## Handled commands
 
 | Command | Result | Emits |
 | --- | --- | --- |
-| Compose repository blueprint | Generate the selected files or return an option error. | Repository blueprint composed; UX Design enabled when selected |
+| Compose repository blueprint | Validate the design-tool selection and generate the selected files, or return an option error. | Repository blueprint composed; Design tool selected; UX Design enabled when selected |
 | Run contract gates | Run lint, verification, and breaking-change comparison, or return a gate error. | Contract gate failed |
 | Publish provider contract | Publish the contract with the release, or return a publication error. | Provider contract published |
 | Compare provider contract | Compare two release contracts and report compatible or breaking. | Breaking change detected |
@@ -118,10 +131,14 @@ provider selection identifies an adapter but does not activate a composition.
 | Event | Payload |
 | --- | --- |
 | Repository blueprint composed | Selected domains, compositions, generated file paths, and rendered built-in role paths. |
+| Design tool selected | Selected `use` value, selected harnesses, transport, canonical entry fields, and active MCP paths. |
 | Provider contract published | Provider identity, release tag, wire surface, contract language, and contract asset path. |
 | Breaking change detected | Provider identity, old and new release tags, and each added, altered, and removed operation. |
 | Contract gate failed | Gate name, operation identifiers, and the failure cause. |
 | UX Design enabled | Enable value, `use` value, designer role paths, Design template paths, and harness configuration paths. |
+
+These events document domain results. `services/factory` has no runtime event mechanism for the
+design-tool selection.
 
 ## References by identity
 

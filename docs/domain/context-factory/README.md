@@ -89,6 +89,8 @@ phase.
 - A design tool can help the designer expert, but it never gates the Design artifact.
 - The design-tool `use` permits `unset`, `figma`, and `pencil`. The default is `unset`.
 - `pencil` selects the pen.dev integration through the MCP server named `pencil`, working on `.pen` files.
+- The Pencil MCP server uses stdio and the portable command `pencil` that the pen.dev setup supplies.
+- The Pencil MCP entry has no machine path, document path, remote endpoint, or filesystem permission.
 - The `use` selection is passive. It names the tool only and adds no event mechanism.
 - The UX Design option declaration renders no file.
 - When UX Design is off, each generated file stays byte-identical.
@@ -129,8 +131,12 @@ phase.
 | Option recommended | event | User |
 | Work batched | event | Implementation expert |
 | UX Design enabled | event | Repository maintainer, artifact master |
+| Design tool selected | event | Repository maintainer, designer expert |
 | Start Design work | command | Designer expert |
 | Reconcile Design | command | Designer expert |
+
+These messages document domain communication. `services/factory` has no runtime event mechanism
+for the design-tool selection.
 
 ## Aggregates
 
