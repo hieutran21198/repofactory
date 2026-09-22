@@ -51,6 +51,9 @@ phase.
 | Design tool | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. |
 | Design constraint | A current Spec or ADR that the Design artifact must follow. |
 | Design token | A named design-system value that controls a visual property. |
+| pencil | The design-tool `use` value that selects the pen.dev integration through the MCP server named `pencil`, working on `.pen` files. |
+| pen.dev | An external design tool that the designer expert can use through the MCP server named `pencil`. |
+| .pen file | The design document format that pen.dev opens. |
 
 ## Business rules
 
@@ -84,6 +87,9 @@ phase.
 - The Design artifact does not own business behavior, domain rules, permissions, or constraints.
 - The designer expert is a content role. The artifact master owns its coordination.
 - A design tool can help the designer expert, but it never gates the Design artifact.
+- The design-tool `use` permits `unset`, `figma`, and `pencil`. The default is `unset`.
+- `pencil` selects the pen.dev integration through the MCP server named `pencil`, working on `.pen` files.
+- The `use` selection is passive. It names the tool only and adds no event mechanism.
 - The UX Design option declaration renders no file.
 - When UX Design is off, each generated file stays byte-identical.
 - When UX Design is on, the composition emits only conditional roles, chapters, settings, and templates.

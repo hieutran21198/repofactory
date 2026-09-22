@@ -43,3 +43,6 @@ write two rows.
 | Design tool | context-factory | An optional external tool that the designer expert uses to inspect and change designs. It is an implementation detail. | Skill |
 | Design constraint | context-factory | A current Spec or ADR that the Design artifact must follow. | Design choice |
 | Design token | context-factory | A named value from a design system that controls a visual property. | Feature variable |
+| pencil | context-factory | The design-tool `use` value that selects the pen.dev integration through the MCP server named `pencil`, working on `.pen` files. | Pencil Project |
+| pen.dev | context-factory | An external design tool that the designer expert can use through the MCP server named `pencil`. | Figma |
+| .pen file | context-factory | The design document format that pen.dev opens. | Figma design file |
