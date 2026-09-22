@@ -87,7 +87,7 @@ phase.
 - The UX Design option declaration renders no file.
 - When UX Design is off, each generated file stays byte-identical.
 - When UX Design is on, the composition emits only conditional roles, chapters, settings, and templates.
-- The design-tool domain declares `use`. The artifact-driven composition owns each harness MCP setting.
+- The design-tool domain declares `use`. Each harness module owns its MCP setting.
 
 ## Inbound messages
 

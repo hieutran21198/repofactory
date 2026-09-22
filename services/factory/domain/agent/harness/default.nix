@@ -18,5 +18,10 @@ in
       default = [ ];
       description = "The harnesses to use for the agent.";
     };
+    ux-design.enable = _utils.mkBoolOpt {
+      default = false;
+      internal = true;
+      description = "Internal signal for the UX Design activation; the artifact-driven composition sets it and each harness adapter reads it.";
+    };
   };
 }
