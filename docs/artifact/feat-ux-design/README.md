@@ -1,6 +1,6 @@
 # Feature: UX Design
 
-**Current version:** 2.0.0
+**Current version:** 2.1.0
 
 ## Summary
 
@@ -10,9 +10,9 @@ selects it.
 
 ## Current artifacts
 
-- [Requirements](versions/2.0.0/requirements/README.md)
-- [Specifications](versions/2.0.0/specifications/README.md)
-- [Decisions](versions/2.0.0/decisions/)
+- [Requirements](versions/2.1.0/requirements/README.md)
+- [Specifications](versions/2.1.0/specifications/README.md)
+- [Decisions](versions/2.1.0/decisions/)
 
 ## Versions
 
@@ -20,6 +20,7 @@ selects it.
 | --- | --- | --- |
 | 1.0.0 | [Initial](changes/change-initial/README.md) | Requirements |
 | 2.0.0 | [design-tool-pencil](changes/change-design-tool-pencil/README.md) | Requirements |
+| 2.1.0 | [pencil-command](changes/change-pencil-command/README.md) | Specifications |
 
 ## Artifacts
 
