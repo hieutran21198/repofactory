@@ -28,9 +28,11 @@ let
   # The pen.dev adapter uses the portable launcher and the open .pen document.
   pencilServerName = "pencil";
   canonicalPencilServer = {
-    type = "stdio";
-    command = "pencil";
-    args = [ ];
+    command = "pen-mcp-server";
+    args = [
+      "--app"
+      "desktop"
+    ];
     env = { };
   };
   # The adapter is active only for a selected Claude harness, the internal UX Design signal, and pencil.

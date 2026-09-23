@@ -31,7 +31,11 @@ let
   pencilServerName = "pencil";
   canonicalPencilServer = {
     type = "local";
-    command = [ "pencil" ];
+    command = [
+      "pen-mcp-server"
+      "--app"
+      "desktop"
+    ];
     enabled = true;
   };
   # The adapter is active only for a selected OpenCode harness, the internal UX Design signal, and pencil.

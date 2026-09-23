@@ -41,7 +41,11 @@ let
   pencilServerName = "pencil";
   canonicalPencilServer = {
     type = "local";
-    command = [ "pencil" ];
+    command = [
+      "pen-mcp-server"
+      "--app"
+      "desktop"
+    ];
     enabled = true;
   };
   secondServer = {

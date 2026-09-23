@@ -38,8 +38,11 @@ let
   };
   pencilServerName = "pencil";
   canonicalPencilServer = {
-    command = "pencil";
-    args = [ ];
+    command = "pen-mcp-server";
+    args = [
+      "--app"
+      "desktop"
+    ];
   };
   secondServer = {
     command = "other";
@@ -228,7 +231,11 @@ let
       "args"
       "command"
     ];
-  pencilEmptyArgs = pencilEntry.args == [ ];
+  pencilEmptyArgs =
+    pencilEntry.args == [
+      "--app"
+      "desktop"
+    ];
   pencilNoEnvField = !(pencilEntry ? env);
   pencilNoForbiddenFields =
     !(pencilEntry ? url)

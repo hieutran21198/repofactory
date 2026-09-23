@@ -28,8 +28,11 @@ let
   # The pen.dev adapter uses the portable launcher and the open .pen document.
   pencilServerName = "pencil";
   canonicalPencilServer = {
-    command = "pencil";
-    args = [ ];
+    command = "pen-mcp-server";
+    args = [
+      "--app"
+      "desktop"
+    ];
   };
   # The adapter is active only for a selected Codex harness, the internal UX Design signal, and pencil.
   pencilActive = builtins.elem "codex" agent.harness.uses && uxDesign && designTool == "pencil";
