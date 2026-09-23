@@ -38,9 +38,11 @@ let
     env.FIGMA_UI_MCP_TARGET = "Figma Desktop";
   };
   canonicalPencilServer = {
-    type = "stdio";
-    command = "pencil";
-    args = [ ];
+    command = "pen-mcp-server";
+    args = [
+      "--app"
+      "desktop"
+    ];
     env = { };
   };
   secondServer = {
@@ -215,16 +217,20 @@ let
   pencilOffOmitsFile = builtins.all (cfg: !(hasMcpFile cfg)) pencilOffCases;
   pencilOffOmitsAssertions = builtins.all (cfg: (cfg.assertions or [ ]) == [ ]) pencilOffCases;
 
-  # Pencil active: exact canonical entry, stdio transport, no forbidden field.
+  # Pencil active: exact canonical entry, no type key, no forbidden field.
   pencilKeysExact =
     builtins.attrNames pencilEntry == [
       "args"
       "command"
       "env"
-      "type"
     ];
-  pencilTransportStdio = pencilEntry.type == "stdio";
-  pencilEmptyArgsAndEnv = pencilEntry.args == [ ] && pencilEntry.env == { };
+  pencilNoType = !(pencilEntry ? type);
+  pencilEmptyArgsAndEnv =
+    pencilEntry.args == [
+      "--app"
+      "desktop"
+    ]
+    && pencilEntry.env == { };
   pencilNoForbiddenFields =
     !(pencilEntry ? url)
     && !(pencilEntry ? document)
@@ -267,7 +273,7 @@ assert pencilOffOmitsFile;
 assert pencilOffOmitsAssertions;
 assert pencilCanonicalAdded;
 assert pencilKeysExact;
-assert pencilTransportStdio;
+assert pencilNoType;
 assert pencilEmptyArgsAndEnv;
 assert pencilNoForbiddenFields;
 assert activePencilRendersFile;
@@ -299,7 +305,7 @@ assert pencilAddsNoFigma;
     pencilOffOmitsAssertions
     pencilCanonicalAdded
     pencilKeysExact
-    pencilTransportStdio
+    pencilNoType
     pencilEmptyArgsAndEnv
     pencilNoForbiddenFields
     activePencilRendersFile
